@@ -1,0 +1,33 @@
+[
+		{
+			"match_percentage": "integer (0-100)",
+			"required_experience": "minimum years required (numeric duration only) or null",
+			"experience_gap": "difference between minimum experience requirement and total relevant experience in years (zero if relevant experience is more or experience is not specified)string (numeric duration only) or null",
+			"skills":  ["array", "of", "ALL", "mentioned", "technical", "and", "soft", "skills", "in", "job", "description", "not", "in", "resume"],
+			"contact_email": ["list", "of", "emails", "or", "null" ],
+			"contact_number": ["list", "of", "phone numbers", "or", "null" ],
+			"application_link": ["list", "of", "URLs", "(prioritize external links)"],
+			"title": "string (standardized role, e.g., 'Senior Software Engineer')",
+			"location": "string (city/state/country; include 'Remote', 'Hybrid', or 'On-site' when specified) or null if not specified",
+			"salary": "string (exact wording including ranges/benefits, e.g. , '$120K-$150K + bonuses') or null if not specified",
+			"company_name": "string (official registered name)",
+			"should_apply": "boolean",
+			"message_content" : {
+				"subject": "string",
+				"body": "string"
+			},
+			"additional_data": {
+				"employment_type": "string (e.g., Full-time/Contract/Internship)",
+				"application_deadline": "string (exact date phrasing) or null",
+				"education_requirements": "string or null if not specified",
+				"certifications": ["array", "of", "required", "certifications"],
+				"security_clearance": "string or null",
+				"visa_sponsorship": "boolean or null",
+				"benefits": ["array", "of", "mentioned", "perks"],
+				"remote_eligibility": "boolean or null",
+				"travel_requirements": "string (e.g., '30% travel')",
+				"other": {"key": "value pairs for remaining data"}
+			}
+		},
+		{}
+	]

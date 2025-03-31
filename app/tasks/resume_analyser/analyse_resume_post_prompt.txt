@@ -1,0 +1,55 @@
+Analyze the provided resume and each of the LinkedIn job postings. For each job posting, perform a detailed comparison with the resume and generate a structured report in JSON format. The analysis should evaluate compatibility, extract relevant information, and highlight discrepancies. Follow these steps for each job posting:
+
+1. Match Percentage Calculation
+Objective: Determine how well the resume aligns with the job posting based on multiple criteria.
+Criteria and Weights:
+Skills (40%): Compare technical skills (e.g., Python, SQL) and consider all the soft skills (e.g., teamwork, communication) present in the resume even if they are not explicitly mentioned in the resume and job posting. Allow for partial matches (e.g., 'JavaScript' and 'Node.js' as related) using semantic similarity where possible.
+Experience (30%): Assess the candidate’s relevant work experience against the job requirements. If the job specifies a range (e.g., '3-5 years'), use the minimum value for comparison. Sum all relevant experience from the resume.
+Education (20%): Verify if the resume includes the required degrees, certifications, or qualifications specified in the job posting.
+Keywords (10%): Identify overlapping industry-specific terms, tools, or buzzwords (e.g., 'agile,' 'cloud computing') between the resume and job posting.
+Dynamic Adjustment: If a criterion (e.g., education) is not mentioned in the job posting, set its weight to 0% and redistribute the remaining weights proportionally (e.g., if education is absent, skills become 50%, experience 37.5%, keywords 12.5%).
+Output: Express the final match as a percentage (e.g., '78%').
+2. Email Extraction
+Method: Use a regular expression to identify all email addresses in the job posting text (e.g., patterns like [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}).
+Output: List all unique email addresses found; return an empty array if none are detected.
+3. Form URL Identification
+Criteria:
+Identify URLs containing '/form/' in the path.
+Recognize URLs from known form platforms (e.g., 'forms.google.com,' 'typeform.com,' 'surveymonkey.com').
+Look for application-related keywords in URLs (e.g., 'apply,' 'application,' 'submit,' 'careers').
+Output: List all matching URLs; return an empty array if none are found.
+4. Missing Requirements and Experience Gaps
+Missing Skills:
+Identify skills explicitly required in the job posting but absent from the resume.
+Experience Gap:
+Calculate the difference between the minimum required years of experience and the candidate’s total relevant experience.
+If the candidate exceeds the requirement, report '0 years' and note the surplus in the 'notes' section.
+If experience is unspecified in the job posting, report 'Not specified'.
+Educational Gaps:
+List any required degrees or certifications missing from the resume (e.g., 'Bachelor’s in Computer Science').
+5. Additional Data
+Job Title: Extract the primary job title from the job posting (e.g., 'Senior Software Engineer').
+Notes: Include observations such as:
+Extra qualifications or certifications beyond requirements (e.g., 'AWS Certified').
+6. You will be given messege_content (which has some info about my work, projects and experience and resume link)
+Based on resume and LinkedIn post, modify messege_content
+	Fot mail subject: "application for {Role} at {Company name if present else dont mention}" You are allowed to make slight modifications in subject 
+	1.Tailor the email's message content to emphasize the candidate’s strengths that align with the job post.
+	2.Incorporate relevant keywords, skills, and experiences mentioned in the resume that match the job description.
+	3.Enure the tone remains professional and the message is concise, persuasive, and targeted to the hiring needs.
+	4.Retain any essential details (like the resume link) from the original email text while reformatting or rewording content to enhance alignment with the job post.
+	Return the modified version of the "message_content" in that seamlessly integrates the candidate's qualifications from the resume with the job requirements highlighted in the LinkedIn post.
+Relevant projects or achievements in the resume that align with the job.
+Final and most important: 
+	Key in json with "should_apply" true or false boolean depending on match
+Discrepancies (e.g., job titles not matching) or other noteworthy details.
+
+	Consider following edge cases:
+	Most important: There might be multiple job postings, and each one should be evaluated separately.
+	1. If a job posting does not include any application mechanism (email, link, or phone number), reject it.
+	2. Keep null values for fields that are not specified in the job posting.
+	3. My preference order is Python Developers, Golang Developer, Java Developer
+	4. You must always replace placeholders with actual values
+	
+Output Format
+For each job posting, return a JSON object in the following structure:
