@@ -8,7 +8,7 @@ Experience (30%): Assess the candidate’s relevant work experience against the 
 Education (20%): Verify if the resume includes the required degrees, certifications, or qualifications specified in the job posting.
 Keywords (10%): Identify overlapping industry-specific terms, tools, or buzzwords (e.g., 'agile,' 'cloud computing') between the resume and job posting.
 Dynamic Adjustment: If a criterion (e.g., education) is not mentioned in the job posting, set its weight to 0% and redistribute the remaining weights proportionally (e.g., if education is absent, skills become 50%, experience 37.5%, keywords 12.5%).
-Output: Express the final match as a percentage (e.g., '78%').
+Output: Express the final match as a interger percentage (e.g., 78, 56).
 2. Email Extraction
 Method: Use a regular expression to identify all email addresses in the job posting text (e.g., patterns like [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}).
 Output: List all unique email addresses found; return an empty array if none are detected.
@@ -23,8 +23,8 @@ Missing Skills:
 Identify skills explicitly required in the job posting but absent from the resume.
 Experience Gap:
 Calculate the difference between the minimum required years of experience and the candidate’s total relevant experience.
-If the candidate exceeds the requirement, report '0 years' and note the surplus in the 'notes' section.
-If experience is unspecified in the job posting, report 'Not specified'.
+If the candidate exceeds the requirement, report 0 as int and note the surplus in the 'notes' section.
+If experience is unspecified in the job posting, report 0 as int.
 Educational Gaps:
 List any required degrees or certifications missing from the resume (e.g., 'Bachelor’s in Computer Science').
 5. Additional Data

@@ -58,7 +58,7 @@ def send_email_via_gmail_api(
 		message['to'] = to_email
 		message['subject'] = subject
 		if from_email:
-			message['from'] = from_email
+			message['From'] = from_email
 		
 		raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 		

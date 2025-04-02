@@ -1,8 +1,8 @@
 [
 		{
-			"match_percentage": "integer (0-100)",
-			"required_experience": "minimum years required (numeric duration only) or null",
-			"experience_gap": "difference between minimum experience requirement and total relevant experience in years (zero if relevant experience is more or experience is not specified)string (numeric duration only) or null",
+			"match_percentage": "type:int (0-100)",
+			"required_experience": "type:int minimum years required (numeric duration only) or 0",
+			"experience_gap": "type:int difference between minimum experience requirement and total relevant experience in years (zero if relevant experience is more or experience is not specified)string (numeric duration only) or 0",
 			"skills":  ["array", "of", "ALL", "mentioned", "technical", "and", "soft", "skills", "in", "job", "description", "not", "in", "resume"],
 			"contact_email": ["list", "of", "emails", "or", "null" ],
 			"contact_number": ["list", "of", "phone numbers", "or", "null" ],

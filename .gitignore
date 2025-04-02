@@ -1,7 +1,12 @@
 # Ignore files
+*.pyc
+*.py[cod]
+__pycache__/
+
+.env
 .linkedinpost
 linkedin_posts.xlsx
-.env
+
 jobs_output.json
 app/tasks/email_sender_lib/client_secret.json
 app/tasks/email_sender_lib/token.json

@@ -502,7 +502,7 @@ def scrape_linkedin_posts_for_query(driver, query: str):
 	scroll_attempts = 0
 	max_attempts = 15
 	previous_post_count = 0
-	MAX_POST_TO_FETCH = 18
+	MAX_POST_TO_FETCH = int(os.environ.get('MAX_POST_TO_FETCH', 18))
 
 	try:
 		perform_search(driver, query)
