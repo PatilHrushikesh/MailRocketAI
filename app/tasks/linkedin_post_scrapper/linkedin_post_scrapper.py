@@ -506,7 +506,8 @@ def scrape_linkedin_posts_for_query(driver, query: str):
 
 	try:
 		perform_search(driver, query)
-		sort_by_latest(driver)
+		if os.getenv("SORT_BY_LATEST") == "True":
+			sort_by_latest(driver)
 		time.sleep(3)
 
 		while scroll_attempts < max_attempts and len(all_posts) < MAX_POST_TO_FETCH:
