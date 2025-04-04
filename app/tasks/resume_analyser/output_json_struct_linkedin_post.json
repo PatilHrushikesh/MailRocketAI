@@ -28,6 +28,5 @@
 				"travel_requirements": "string (e.g., '30% travel')",
 				"other": {"key": "value pairs for remaining data"}
 			}
-		},
-		{}
+		}
 	]

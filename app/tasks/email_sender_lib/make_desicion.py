@@ -12,7 +12,7 @@ def should_send_email(job_data):
 	# Check if user manually opted out
 	# if not job_data.get('should_apply', False):
 	#     return False, "Should apply is set to False."
-	print(f"JOb data:{json.dumps(job_data, indent=4)}")
+	# print(f"JOb data:{json.dumps(job_data, indent=4)}")
 	
 	# Check match percentage
 	try:
