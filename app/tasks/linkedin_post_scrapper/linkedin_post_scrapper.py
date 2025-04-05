@@ -28,11 +28,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (NoSuchElementException,
 									   TimeoutException,
-									   WebDriverException)
+									   WebDriverException,
+									   InvalidCookieDomainException)
 from dotenv import load_dotenv
 
 
 import pandas as pd
+import pickle
 from datetime import datetime, timedelta
 from selenium.webdriver.common.keys import Keys
 
@@ -46,7 +48,8 @@ logging.basicConfig(
 )
 
 # Configuration constants
-LINKEDIN_URL = "https://www.linkedin.com/login"
+LINKEDIN_LOGIN_URL = "https://www.linkedin.com/login"
+LINKEDIN_FEED_URL = "https://www.linkedin.com/feed/"
 # DRIVER_PATH = os.environ.get("CHROME_DRIVER_PATH", "default/path")
 # logging.info("Using ChromeDriver path: %s", DRIVER_PATH)
 
@@ -64,55 +67,111 @@ POST_SELECTOR = "li.artdeco-card"  # More stable class selector
 CONTENT_SELECTOR = "[data-test-id='post-content']"
 
 def setup_driver(config):
-	"""Initialize and configure Chrome WebDriver"""
-	try:
-		options = webdriver.ChromeOptions()
-		if config["headless"]:
-			options.add_argument("--headless=new")
-		options.add_argument("--no-sandbox")
-		options.add_argument("--disable-dev-shm-usage")
-		options.add_argument("--enable-automation")
-		options.add_argument("--disable-blink-features=AutomationControlled")
-		options.add_experimental_option("excludeSwitches", ["enable-automation"])
-		options.add_experimental_option("useAutomationExtension", False)
-		options.add_argument("--incognito")
-		
-		driver = webdriver.Chrome()
-		driver.maximize_window()
-		return driver
-	except WebDriverException as e:
-		logging.error("WebDriver initialization failed: %s", e)
-		raise
+    """Initialize and configure Chrome WebDriver"""
+    try:
+        options = webdriver.ChromeOptions()
+        if config["headless"]:
+            options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--enable-automation")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
+        driver = webdriver.Chrome()
+        driver.maximize_window()
+        return driver
+    except WebDriverException as e:
+        logging.error("WebDriver initialization failed: %s", e)
+        raise
 
-def login_to_linkedin(driver, username, password):
-	"""Perform login operation with credentials"""
-	try:
-		driver.get(LINKEDIN_URL)
-		logging.info("Opened LinkedIn login page")
 
-		# Wait for critical elements to load
-		WebDriverWait(driver, 15).until(
-			EC.presence_of_element_located((By.ID, "username"))
-		)
+def login_to_linkedin(driver, username=None, password=None):
+    """Handle LinkedIn login with cookies fallback to credentials"""
+    try:
+        # Try to use existing cookies first
+        try:
+            driver.get(LINKEDIN_LOGIN_URL)
+            cookies = pickle.load(open("cookies.pkl", "rb"))
+            for cookie in cookies:
+                try:
+                    driver.add_cookie(cookie)
+                except InvalidCookieDomainException:
+                    pass
+            logging.info("Cookies loaded successfully")
+        except (FileNotFoundError, Exception) as e:
+            logging.warning("No cookies found or invalid cookies: %s", str(e))
 
-		# Enter credentials
-		username_field = driver.find_element(By.ID, "username")
-		password_field = driver.find_element(By.ID, "password")
-		
-		username_field.send_keys(username)
-		password_field.send_keys(password)
-		logging.info("Credentials entered")
+        # Verify login status
+        driver.get(LINKEDIN_FEED_URL)
+        time.sleep(2)  # Small wait for potential redirects
 
-		# Click login button
-		driver.find_element(By.XPATH, "//button[@type='submit']").click()
-		logging.info("Login button clicked")
+        if not is_logged_in(driver):
+            logging.info("Session expired or no valid cookies. Starting fresh login...")
+            perform_credentials_login(driver, username, password)
 
-	except (NoSuchElementException, TimeoutException) as e:
-		logging.error("Login failed: Element not found - %s", e)
-		raise
-	except Exception as e:
-		logging.error("Unexpected error during login: %s", e)
-		raise
+            # Verify successful credential login
+            if not is_logged_in(driver):
+                raise RuntimeError("Credentials login failed")
+
+            # Save new cookies only after successful login
+            pickle.dump(driver.get_cookies(), open("cookies.pkl", "wb"))
+            logging.info("New cookies saved")
+
+        logging.info("Successfully logged in")
+        return True
+
+    except Exception as e:
+        logging.error("Login failed: %s", str(e))
+        raise
+
+
+def is_logged_in(driver):
+    """Check if we're actually logged in"""
+    try:
+        # Check for either feed content or login elements
+        WebDriverWait(driver, 15).until(
+            lambda d: d.find_elements(
+                By.CSS_SELECTOR, ".scaffold-finite-scroll__content"
+            )
+            or d.find_elements(By.ID, "username")
+        )
+        return bool(
+            driver.find_elements(By.CSS_SELECTOR, ".scaffold-finite-scroll__content")
+        )
+    except TimeoutException:
+        return False
+
+
+def perform_credentials_login(driver, username, password):
+    """Handle manual credential login"""
+    try:
+        driver.get(LINKEDIN_LOGIN_URL)
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.ID, "username"))
+        )
+
+        # Input credentials
+        username_field = driver.find_element(By.ID, "username")
+        password_field = driver.find_element(By.ID, "password")
+
+        username_field.clear()
+        username_field.send_keys(username)
+        password_field.clear()
+        password_field.send_keys(password)
+
+        # Submit form
+        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+
+        # Handle potential security checks
+        WebDriverWait(driver, 30).until(
+            lambda d: "checkpoint/challenge" not in d.current_url
+        )
+
+    except Exception as e:
+        logging.error("Credential login failed: %s", str(e))
+        raise
+
 
 def handle_2fa(driver):
 	"""Check for 2FA prompt and log occurrence"""
@@ -156,7 +215,7 @@ def dismiss_popups(driver):
 		logging.info("Dismissed unexpected pop-up")
 	except TimeoutException:
 		pass
-	
+
 def scroll_to_element(driver, element):
 	"""Enhanced scroll with visibility check"""
 	driver.execute_script("""
@@ -173,7 +232,7 @@ def scroll_to_element(driver, element):
 	
 	WebDriverWait(driver, 5).until(
 		lambda d: element.is_displayed() and element.location_once_scrolled_into_view['y'] < d.execute_script("return window.innerHeight"))
-	
+
 def perform_search(driver, query):
 	"""Execute LinkedIn search for a given query and navigate to posts"""
 	try:
@@ -255,7 +314,7 @@ def scroll_to_load_posts(driver):
 # 	"""Extract and filter posts from current page"""
 # 	posts_data = []
 # 	cutoff_date = datetime.now() - timedelta(weeks=MAX_POST_AGE_WEEKS)
-	
+
 # 	try:
 # 		posts = driver.find_elements(By.XPATH, "//div[contains(@class, 'feed-shared-update-v2')]")
 # 		logging.info(f"Found {len(posts)} posts")
@@ -265,7 +324,7 @@ def scroll_to_load_posts(driver):
 # 				# Extract timestamp
 # 				time_element = post.find_element(By.XPATH, ".//span[@class='visually-hidden']")
 # 				post_date = parse_timestamp(time_element.text)
-				
+
 # 				if not is_recent_post(post_date):
 # 					continue
 
@@ -276,7 +335,7 @@ def scroll_to_load_posts(driver):
 # 				author = author_element.text
 # 				profile_link_element = post.find_element(By.XPATH, ".//a[contains(@class, 'update-components-actor__container-link')]")
 # 				profile_link = profile_link_element.get_attribute('href')
-				
+
 # 				# Get engagement metrics
 # 				try:
 # 					reactions_element = post.find_element(By.XPATH, ".//span[contains(@class, 'social-details-social-counts__reactions')]")
@@ -299,7 +358,7 @@ def scroll_to_load_posts(driver):
 
 # 	except NoSuchElementException as e:
 # 		logging.error(f"No posts found: {str(e)}")
-	
+
 # 	return posts_data
 
 def read_queries_from_file(file_path):
