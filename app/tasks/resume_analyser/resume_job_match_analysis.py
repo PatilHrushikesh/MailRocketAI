@@ -3,13 +3,15 @@ import json
 import logging
 import os
 import time
+import traceback
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from app.tasks.resume_analyser.models import models_list, get_llm
+from app.tasks.resume_analyser.utils import load_file_content, load_json_file, save_model_result_to_json
 
-from app.tasks.resume_analyser.utils import load_file_content, load_json_file
-
+# from models import models_list, get_llm
+# from utils import load_file_content, save_model_result_to_json#, load_json_file, append_result_to_json_file
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +26,7 @@ load_dotenv()
 current_dir = os.path.dirname(__file__)
 
 # Global paths
-RESPONSE_TEMPLATE_PATH = os.path.join(
+ANALYZE_RESUME_PROMPT_PATH = os.path.join(
     current_dir, os.getenv("ANALYZE_RESUME_PROMPT_PATH")
 )
 JSON_STRUCT_PATH = os.path.join(current_dir, os.getenv("JSON_STRUCT_PATH"))
@@ -50,39 +52,40 @@ def initialize_prompt():
     logger.info("Initializing prompt template")
 
     # Load all necessary files
-    response_template = load_file_content(RESPONSE_TEMPLATE_PATH)
-    json_structure = load_json_file(JSON_STRUCT_PATH)
-    full_template = response_template + json.dumps(json_structure)
+    response_template = load_file_content(ANALYZE_RESUME_PROMPT_PATH)
+    json_structure = load_file_content(JSON_STRUCT_PATH)
+    full_template = response_template + json_structure
 
     # Create the prompt template
     prompt = ChatPromptTemplate.from_template(
         """RESUME ANALYSIS TASK
-{response_template}
+            {response_template}
 
-RESUME CONTENT:
-{resume}
+            RESUME CONTENT:
+            {resume}
 
-JOB POSTINGS:
-{jobs}
+            JOB POSTINGS:
+            {jobs}
 
-MESSEGE_CONTENT_TAILORING_INSTRUCTIONS:
-{messege_content_tailoring_instructions}
+            MESSEGE_CONTENT_TAILORING_INSTRUCTIONS:
+            {messege_content_tailoring_instructions}
 
-MESSEGE_CONTENT:
-{messege_content}
+            MESSEGE_CONTENT:
+            {messege_content}
 
-RESUME_URL:
-{resume_url}
+            RESUME_URL:
+            {resume_url}
 
-LINKEDIN_PROFILE_URL:
-{linkedin_profile_url}
+            LINKEDIN_PROFILE_URL:
+            {linkedin_profile_url}
 
-STRICT JSON OUTPUT:"""
+            STRICT JSON OUTPUT:"""
     )
 
     return prompt, full_template
 
 PROMPT, FULL_TEMPLATE = initialize_prompt()
+
 
 def invoke_model(prompt, parameter_dict):
     """Invoke the LLM with the given prompt and parameters."""
@@ -97,33 +100,68 @@ def invoke_model(prompt, parameter_dict):
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    try:
-        # Get the next model in the cycle
-        current_model = next(model_cycle)
-        logger.info(f"Using {current_model['provider']} model: {current_model['name']}")
+    # Track attempts to avoid infinite loop
+    attempts = 0
+    max_attempts = len(models_list)
 
-        # Set up the processing chain
-        llm = get_llm(current_model)
-        parser = JsonOutputParser()
-        chain = prompt | llm | parser
+    while attempts < max_attempts:
+        attempts += 1
 
-        # Invoke the model
-        result = chain.invoke(parameter_dict)
-        logger.debug("Model response received")
+        try:
+            # Get the next model in the cycle
+            current_model = next(model_cycle)
+            logger.info(
+                f"Using {current_model['provider']} model: {current_model['name']}"
+            )
 
-        # Add model name to the result
-        if isinstance(result, list):
-            for item in result:
-                item["model_name"] = current_model["name"]
-        else:
-            result["model_name"] = current_model["name"]
+            # Set up the processing chain
+            llm = get_llm(current_model)
+            parser = JsonOutputParser()
+            chain = prompt | llm | parser
 
-        return [result] if isinstance(result, dict) else result, current_model
+            # Invoke the model
+            result = chain.invoke(parameter_dict)
+            logger.debug("Model response received")
 
-    except Exception as e:
-        error_msg = f"Error invoking model: {str(e)}"
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+            # Add model name to the result
+            if isinstance(result, list):
+                for item in result:
+                    item["model_name"] = current_model["name"]
+                    item["original_job_text"] = parameter_dict["jobs"]
+            else:
+                result["model_name"] = current_model["name"]
+                result["original_job_text"] = parameter_dict["jobs"]
+
+            return [result] if isinstance(result, dict) else result, current_model
+
+        except Exception as e:
+            error_tb = traceback.format_exc()
+            error_msg = f"Error invoking model {current_model['name']}: {str(e)}"
+            logger.error(error_msg)
+            logger.error(f"Error stack trace: {error_tb}")
+
+            # Create error result JSON
+            error_result = {
+                "model_name": current_model["name"],
+                "original_job_text": parameter_dict["jobs"],
+                "error": str(e),
+                "status": "failed",
+                "timestamp": time.time(),
+            }
+
+            # Try to continue with next model if we have attempts left
+            if attempts < max_attempts:
+                logger.info(
+                    f"Attempting with next model. Attempt {attempts+1} of {max_attempts}"
+                )
+                continue
+
+            # Return the error result if we've exhausted all models
+            logger.warning("All models have failed. Returning error result.")
+            return [error_result], current_model
+
+    # This should never happen given the while loop condition, but just in case
+    raise ValueError("Failed to invoke any models after exhausting all options")
 
 
 def analyze_job_match(jobs_text):
@@ -148,10 +186,13 @@ def analyze_job_match(jobs_text):
         logger.info(
             f"Analysis complete using {current_model['provider']} model {current_model['name']}"
         )
-        logger.info(f"Result: {json.dumps(result, indent=2)}")
+
+        save_model_result_to_json(result, current_model["name"])
         return result
 
     except Exception as e:
+        # print error stack trace
+        logger.error(f"Error stack trace: {traceback.format_exc()}")
         logger.error(f"Analysis failed: {str(e)}")
         return []
 

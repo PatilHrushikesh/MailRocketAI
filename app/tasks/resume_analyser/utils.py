@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+from datetime import datetime
 
 # Configure the logging settings
 logging.basicConfig(
@@ -10,6 +12,72 @@ logging.basicConfig(
 
 # Create a logger instance for this module
 logger = logging.getLogger(__name__)
+
+
+# Get the base directory (project root)
+BASE_DIR = "D:\\Projects\\linkedin_mail_sender"
+
+def convert_datetime(obj):
+    if isinstance(obj, datetime):
+        return obj.strftime("%Y-%m-%d %H:%M:%S")  # Or use obj.isoformat()
+    return obj
+
+
+def append_dict_to_json_array(data: dict, filename: str) -> None:
+    """
+    Appends a dictionary to a JSON file as part of a JSON array.
+    If the file doesn't exist or is empty, creates a new JSON array with the data.
+    Operates efficiently by avoiding reading the entire file.
+
+    Parameters:
+    - data (dict): The dictionary data to append
+    - filename (str): Full path to the JSON file
+    """
+    data_json = json.dumps(data, indent=2, default=convert_datetime)
+
+    try:
+        if not os.path.exists(filename):
+            logger.info(f"File {filename} does not exist. Creating a new JSON array.")
+            with open(filename, "w") as f:
+                f.write("[\n")
+                f.write(data_json)
+                f.write("\n]")
+        else:
+            logger.info(f"Appending data to existing file {filename}.")
+            with open(filename, "rb+") as f:
+                f.seek(0, os.SEEK_END)
+                if f.tell() == 0:
+                    logger.warning(f"File {filename} is empty. Writing new JSON array.")
+                    f.write(b"[\n")
+                    f.write(data_json.encode("utf-8"))
+                    f.write(b"\n]")
+                else:
+                    f.seek(-1, os.SEEK_END)
+                    last_char = f.read(1)
+                    f.seek(-1, os.SEEK_END)
+                    f.truncate()  # Remove the last character ']'
+                    f.write(b",\n")
+                    f.write(data_json.encode("utf-8"))
+                    f.write(b"\n]")
+    except Exception as e:
+        logger.error(f"Failed to append data to {filename}: {e}")
+        raise
+
+
+def save_model_result_to_json(
+    result: dict, model_name: str, filename: str = None
+) -> None:
+    """
+    Saves a model result dictionary to a model-specific JSON file.
+    Handles the file path generation and delegates the actual file operations.
+
+    Parameters:
+    - result (dict): The model result to save
+    - model_name (str): Name of the model (used for default filename)
+    - filename (str, optional): Custom filename override
+    """
+    if not filename:
+        filename = os.path.join(BASE_DIR, "final_output_by_model", f"{model_name}.json")
 
 
 def should_send_email(job_data):

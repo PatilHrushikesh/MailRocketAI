@@ -451,7 +451,11 @@ def scrape_linkedin_post(html):
 		text_container = soup.find('div', class_='update-components-text')
 		if text_container:
 			data['post_text'] = ' '.join(text_container.stripped_strings)
-		
+			data['post_text'] = data['post_text'].encode('utf-8', errors='replace').decode('utf-8')
+		else:
+			logging.warning("No text container found")
+			return None
+
 		# Hashtags
 		data['hashtags'] = [tag.get_text(strip=True) for tag in soup.select('a[href*="/hashtag/"]') if tag.text]
 		
@@ -463,6 +467,7 @@ def scrape_linkedin_post(html):
 		if comments:
 			# We assume the first token is the comment count.
 			data['comments'] = comments.get_text(strip=True).split()[0]
+
 	
 	except Exception as e:
 		logging.error(f"Parsing error: {str(e)}")
@@ -590,6 +595,8 @@ def scrape_linkedin_posts_for_query(driver, query: str):
 					try:
 						post_html = post.get_attribute('outerHTML')
 						post_data = scrape_linkedin_post(post_html)
+						if post_data is None:
+							continue
 						post_date = post_data.get('post_date', datetime.now())
 
 						# Age check for each new post
