@@ -5,13 +5,23 @@ import os
 import time
 import traceback
 from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
+
 from app.tasks.resume_analyser.models import models_list, get_llm
 from app.tasks.resume_analyser.utils import load_file_content, load_json_file, save_model_result_to_json
 
 # from models import models_list, get_llm
-# from utils import load_file_content, save_model_result_to_json#, load_json_file, append_result_to_json_file
+# from utils import (
+#     load_file_content,
+#     save_model_result_to_json,
+# )  # , load_json_file, append_result_to_json_file
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -41,37 +51,25 @@ RESUME_TEXT = load_file_content(RESUME_PATH)
 MESSAGE_CONTENT = load_file_content(MESSAGE_CONTENT_PATH)
 TAILORING_INSTRUCTIONS = load_file_content(TAILORING_INSTRUCTIONS_PATH)
 
-# Get prompt template
-
 # Set up model cycle
 model_cycle = itertools.cycle(models_list)
 
 
 def initialize_prompt():
-    """Initialize and return the prompt template and necessary data."""
-    logger.info("Initializing prompt template")
+    """Initialize and return the system and user prompt templates and necessary data."""
+    logger.info("Initializing prompt templates")
 
     # Load all necessary files
     response_template = load_file_content(ANALYZE_RESUME_PROMPT_PATH)
     json_structure = load_file_content(JSON_STRUCT_PATH)
     full_template = response_template + json_structure
 
-    # Create the prompt template
-    prompt = ChatPromptTemplate.from_template(
-        """RESUME ANALYSIS TASK
+    # Create the system prompt template
+    system_template = """RESUME ANALYSIS TASK
             {response_template}
-
-            RESUME CONTENT:
-            {resume}
-
-            JOB POSTINGS:
-            {jobs}
 
             MESSEGE_CONTENT_TAILORING_INSTRUCTIONS:
             {messege_content_tailoring_instructions}
-
-            MESSEGE_CONTENT:
-            {messege_content}
 
             RESUME_URL:
             {resume_url}
@@ -80,9 +78,28 @@ def initialize_prompt():
             {linkedin_profile_url}
 
             STRICT JSON OUTPUT:"""
+
+    system_message_prompt = SystemMessagePromptTemplate.from_template(system_template)
+
+    # Create the user prompt template
+    user_template = """RESUME CONTENT:
+            {resume}
+
+            JOB POSTINGS:
+            {jobs}
+
+            MESSEGE_CONTENT:
+            {messege_content}"""
+
+    human_message_prompt = HumanMessagePromptTemplate.from_template(user_template)
+
+    # Combine into a ChatPromptTemplate
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [system_message_prompt, human_message_prompt]
     )
 
-    return prompt, full_template
+    return chat_prompt, full_template
+
 
 PROMPT, FULL_TEMPLATE = initialize_prompt()
 
@@ -94,7 +111,8 @@ def invoke_model(prompt, parameter_dict):
     logger.info("Invoking model")
 
     # Validate prompt parameters
-    missing_keys = [key for key in prompt.input_variables if key not in parameter_dict]
+    all_vars = set(prompt.input_variables)
+    missing_keys = [key for key in all_vars if key not in parameter_dict]
     if missing_keys:
         error_msg = f"Missing required keys in parameter_dict: {missing_keys}"
         logger.error(error_msg)
@@ -122,15 +140,6 @@ def invoke_model(prompt, parameter_dict):
             # Invoke the model
             result = chain.invoke(parameter_dict)
             logger.debug("Model response received")
-
-            # Add model name to the result
-            if isinstance(result, list):
-                for item in result:
-                    item["model_name"] = current_model["name"]
-                    item["original_job_text"] = parameter_dict["jobs"]
-            else:
-                result["model_name"] = current_model["name"]
-                result["original_job_text"] = parameter_dict["jobs"]
 
             return [result] if isinstance(result, dict) else result, current_model
 
@@ -188,7 +197,7 @@ def analyze_job_match(jobs_text):
         )
 
         save_model_result_to_json(result, current_model["name"])
-        return result
+        return result, current_model
 
     except Exception as e:
         # print error stack trace
