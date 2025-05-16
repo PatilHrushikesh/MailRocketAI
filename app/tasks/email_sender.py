@@ -16,7 +16,7 @@ print(linkedin_db_path)
 
 def send_email_task(job_data_json_list: list, job_post=None):
     for job_data_json in job_data_json_list:
-        _, reason = decide_and_send_email(
+        _, reason, final_decision = decide_and_send_email(
             job_data_json, send_email_via_gmail_api, job_post)
         print(reason)
 
@@ -74,6 +74,8 @@ def send_email_task_from_db(db_path=linkedin_db_path):
             """, (final_decision, row["analysis_id"]))
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"Error processing row {row['analysis_id']}: {e}")
 
     conn.commit()  # Enable if you're marking emails as sent

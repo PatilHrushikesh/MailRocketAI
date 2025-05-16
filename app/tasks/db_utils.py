@@ -278,7 +278,7 @@ def insert_post_analysis(post_uid, analysis_data_list, model_used=None, db_path=
 				analysis_data.get("should_apply"),
 				analysis_data.get("message_content", {}).get("subject"),
 				analysis_data.get("message_content", {}).get("body"),
-				False,
+				-1,
 				json.dumps(analysis_data),
 				model_used
 			))
@@ -606,7 +606,10 @@ if __name__ == "__main__":
 
 
 	raw_sql_query = """
-					select count(*) from post_analysis where mail_sent = 1
+					SELECT count(*)
+					FROM post_analysis 
+					WHERE inserted_at > '2025-05-16T00:00:00'
+					ORDER BY inserted_at;
 					"""
 	output = run_raw_sql_query(raw_sql_query)
 
