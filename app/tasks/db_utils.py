@@ -55,7 +55,7 @@ def init_db(db_path=linkedin_db_path):
 		should_apply BOOLEAN,
 		subject TEXT,
 		body TEXT,
-		mail_sent BOOLEAN NOT NULL DEFAULT 0,
+		mail_sent INTEGER NOT NULL DEFAULT -1 CHECK (mail_sent IN (-1, 0, 1)),
 		final_decision BOOLEAN NOT NULL DEFAULT 0,
 		full_analysis_json JSON,
 		model_used TEXT,
@@ -360,6 +360,43 @@ def execute_query(query,db_path=linkedin_db_path):
 	conn.close()	
 
 
+def count_unsent_mail_posts_by_date(db_path):
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    query = """
+    WITH RECURSIVE last_20_days(day) AS (
+        SELECT DATE('now', '-19 days')
+        UNION ALL
+        SELECT DATE(day, '+1 day')
+        FROM last_20_days
+        WHERE day < DATE('now')
+    )
+    SELECT 
+        last_20_days.day AS insertion_date,
+        COUNT(DISTINCT linkedin_posts.uid) AS unsent_mail_post_count
+    FROM 
+        last_20_days
+    LEFT JOIN 
+        linkedin_posts ON DATE(linkedin_posts.inserted_at) = last_20_days.day
+    LEFT JOIN 
+        post_analysis ON post_analysis.post_uid = linkedin_posts.uid AND post_analysis.mail_sent = -1
+    GROUP BY 
+        last_20_days.day
+    ORDER BY 
+        last_20_days.day DESC;
+    """
+
+    cursor.execute(query)
+    rows = cursor.fetchall()
+
+    results = [dict(row) for row in rows]
+    print(json.dumps(results, indent=4, sort_keys=True))
+
+    cursor.close()
+    conn.close()
+
 def read_posts(filters=None, db_path=linkedin_db_path):
 	conn = sqlite3.connect(db_path)
 	conn.row_factory = sqlite3.Row
@@ -604,12 +641,17 @@ if __name__ == "__main__":
 	# 				"""
 	# output = run_raw_sql_query(raw_sql_query)
 
-
+	# count_unsent_mail_posts_by_date(linkedin_db_path)
 	raw_sql_query = """
-					SELECT count(*)
-					FROM post_analysis 
-					WHERE inserted_at > '2025-05-16T00:00:00'
-					ORDER BY inserted_at;
+				SELECT 
+					pa.mail_sent
+				FROM 
+					linkedin_posts lp
+				JOIN 
+					post_analysis pa ON lp.uid = pa.post_uid
+				WHERE 
+					lp.post_link = "https://www.linkedin.com/feed/update/urn:li:activity:7328417439023538176";
+
 					"""
 	output = run_raw_sql_query(raw_sql_query)
 
