@@ -755,6 +755,61 @@ def scrape_linkedin_posts_for_query(driver, query: str, max_results: int, sort_b
     logging.info(f"Finished with {total_scrapped_posts} posts collected")
 
 
+def initialize_and_login(username: str, password: str, config: Optional[dict] = CONFIG):
+    """
+    Initialize browser driver and perform LinkedIn login sequence
+    
+    Args:
+        username: LinkedIn account username
+        password: LinkedIn account password
+        config: Browser configuration dictionary (default: CONFIG)
+    
+    Returns:
+        WebDriver: Initialized and authenticated browser driver
+        
+    Raises:
+        ValueError: For missing required parameters
+        RuntimeError: For authentication failures or critical errors
+    """
+    # Validate credentials
+    if not username or not password:
+        raise ValueError("Both username and password must be provided")
+
+    # Initialize browser driver
+    driver = setup_driver(config)
+    logging.info("Browser initialized with config: %s", config)
+
+    try:
+        # Perform login sequence
+        login_to_linkedin(driver, username, password)
+        time.sleep(2)  # Allow for post-login navigation
+
+        # Check for login-related issues
+        if check_login_errors(driver):
+            raise RuntimeError("Login failed - invalid credentials detected")
+
+        if handle_2fa(driver):
+            raise RuntimeError(
+                "2FA authentication required - please authenticate manually"
+            )
+
+        if handle_captcha(driver):
+            logging.warning(
+                "CAPTCHA challenge detected, manual intervention needed")
+            time.sleep(15)
+
+        dismiss_popups(driver)
+        logging.info("Successfully logged in to LinkedIn")
+
+        return driver
+
+    except Exception as e:
+        # Clean up driver if login fails
+        driver.quit()
+        logging.error("Login process failed: %s", str(e))
+        raise
+
+
 def scrape_linkedin_feed(
     username: str,
     password: str,
@@ -783,34 +838,8 @@ def scrape_linkedin_feed(
     all_posts = []
 
     try:
-        # Validate credentials
-        if not username or not password:
-            raise ValueError("Both username and password must be provided")
-
-        # Set default config if not provided
-        # Initialize browser driver
-        driver = setup_driver(config)
-        logging.info("Browser initialized with config: %s", config)
-
-        # Perform login sequence
-        login_to_linkedin(driver, username, password)
-        time.sleep(2)  # Allow for post-login navigation
-
-        # Check for login-related issues
-        if check_login_errors(driver):
-            raise RuntimeError("Login failed - invalid credentials detected")
-
-        if handle_2fa(driver):
-            raise RuntimeError(
-                "2FA authentication required - please authenticate manually"
-            )
-
-        if handle_captcha(driver):
-            logging.warning("CAPTCHA challenge detected, manual intervention needed")
-            time.sleep(15)
-
-        dismiss_popups(driver)
-        logging.info("Successfully logged in to LinkedIn")
+        # Initialize browser and login
+        driver = initialize_and_login(username, password, config)
 
         # Process search queries
         queries_with_max_results = read_queries_from_file(queries_file)
@@ -824,8 +853,10 @@ def scrape_linkedin_feed(
                     yield batch
                     all_posts.append(batch)
             except Exception as e:
-                logging.error("Failed to process query '%s': %s", query, str(e))
+                logging.error(
+                    "Failed to process query '%s': %s", query, str(e))
                 continue
+
         # Save all posts to Excel in new sheet with date as 3-jan_query
         sheet_name = query + "_" + datetime.now().strftime("%d_%b_%y")
         save_to_excel(all_posts, save_path, sheet_name)
