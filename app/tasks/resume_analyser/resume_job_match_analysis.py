@@ -13,9 +13,12 @@ from langchain_core.prompts import (
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 
-from app.tasks.resume_analyser.models import models_list, get_llm
-from app.tasks.resume_analyser.utils import load_file_content, load_json_file, save_model_result_to_json
-
+try:
+    from app.tasks.resume_analyser.models import models_list, get_llm
+    from app.tasks.resume_analyser.utils import load_file_content, load_json_file, save_model_result_to_json
+except ImportError:
+    from models import models_list, get_llm
+    from utils import load_file_content, load_json_file, save_model_result_to_json
 # from models import models_list, get_llm
 # from utils import (
 #     load_file_content,
@@ -138,6 +141,7 @@ def invoke_model(prompt, parameter_dict):
             chain = prompt | llm | parser
 
             # Invoke the model
+
             result = chain.invoke(parameter_dict)
             logger.debug("Model response received")
 
@@ -227,10 +231,12 @@ def main():
     job_posts = load_file_content(job_posts_path)
 
     # Run analysis with each model
+
+
     output_results = {}
     for i in range(len(models_list[:])):
         current_model = models_list[i % len(models_list)]
-        logger.info(f"Running analysis with model {i+1} of {len(models_list[:2])}")
+        logger.info(f"Running analysis with model {i+1} of {len(models_list[:])}")
 
         # Call analyze_job_match with just the job_posts
         output = analyze_job_match(job_posts)

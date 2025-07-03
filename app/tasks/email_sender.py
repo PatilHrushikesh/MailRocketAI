@@ -6,6 +6,8 @@ from app.tasks.email_sender_lib.gmail_sender import send_email_via_gmail_api
 from app.tasks.email_sender_lib.make_desicion import decide_and_send_email
 import os
 
+from constants import BODY_CLOSER, SUBJECT_POSTFIX
+
 # @app.task(name="tasks.send_email", autoretry_for=(Exception,), retry_kwargs={'max_retries': 3})
 
 linkedin_db_path = os.path.join(
@@ -40,6 +42,9 @@ def send_email_task_from_db(db_path=linkedin_db_path):
         print("No pending emails to send.")
         return
 
+    print(f"Found {len(rows)} pending emails to send.")
+    # return
+
     for row in rows[:]:
         try:
             # Load full analysis JSON
@@ -52,9 +57,24 @@ def send_email_task_from_db(db_path=linkedin_db_path):
 
 
             job_data_json["message_content"] = {
-                "subject": row["subject"] if row["subject"] else "No Subject",
-                "body": row["body"] if row["body"] else "No Body"
+                "subject": row["subject"] if row["subject"] else None,
+                "body": row["body"] if row["body"] else None
             }
+
+            if (
+                job_data_json["message_content"]["subject"] is None
+                or job_data_json["message_content"]["subject"] == ""
+                or job_data_json["message_content"]["body"] is None
+                or job_data_json["message_content"]["body"] == ""
+            ):
+                print(
+                    f"Skipping row {row['analysis_id']} due to empty subject or body"
+                )
+                continue
+            
+            job_data_json["message_content"]["subject"] += SUBJECT_POSTFIX
+            if not "7249255271" in job_data_json["message_content"]["body"]:
+                job_data_json["message_content"]["body"] += BODY_CLOSER
 
             job_post = {"post_link": row["post_link"]}
 
@@ -62,6 +82,7 @@ def send_email_task_from_db(db_path=linkedin_db_path):
                 job_data_json, send_email_via_gmail_api, job_post
             )
             print(f"[{row['analysis_id']}] {reason}")
+            time.sleep(2)
 
 
             # convert final_decision to int

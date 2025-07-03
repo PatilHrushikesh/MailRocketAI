@@ -21,6 +21,7 @@ import sqlite3
 import time
 from typing import Generator, List, Dict, Optional
 from bs4 import BeautifulSoup
+from openpyxl import load_workbook
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
@@ -46,7 +47,7 @@ from datetime import datetime, timedelta
 from selenium.webdriver.common.keys import Keys
 
 from app.tasks.db_utils import check_post_exists, insert_linkedin_post
-from app.tasks.linkedin_post_scrapper.utils import FixedSizeStore, contains_email
+from app.tasks.linkedin_post_scrapper.utils import FixedSizeStore, LinkedInQueryBuilder, contains_email, read_queries_from_file
 
 load_dotenv(override=True)
 
@@ -392,41 +393,44 @@ def scroll_to_load_posts(driver):
 # 	return posts_data
 
 
-def read_queries_from_file(file_path):
-    """
-    Read search queries from a text file
-    Returns list of non-empty lines stripped of whitespace
-    """
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return [line.strip() for line in f.readlines() if line.strip()]
-    except FileNotFoundError:
-        logging.critical(f"Query file not found: {file_path}")
-        raise
-    except Exception as e:
-        logging.critical(f"Error reading query file: {str(e)}")
-        raise
-
-
-def save_to_excel(data, filename=OUTPUT_EXCEL_FILE, sheet_name="Sheet1"):
-    """Save scraped data to Excel file"""
+def save_to_excel(data, filename="output.xlsx", sheet_name="Sheet1"):
+    """Save scraped data to Excel file with safe and unique sheet name"""
     if not data:
         logging.warning("No data to save")
         return
 
-    logging.info("Saving data to Excel...")
-    logging.info(f"Length of data: {len(data)}")
-    # logging.info(f"Data: {data}")
+    # Ensure sheet name is max 31 characters
+    base_name = sheet_name[:31]
 
+    # Check if sheet exists and generate a unique one if needed
+    def get_unique_sheet_name(file, base):
+        if not os.path.exists(file):
+            return base
+        try:
+            wb = load_workbook(file)
+            if base not in wb.sheetnames:
+                return base
+            i = 1
+            while True:
+                suffix = f"_{i}"
+                candidate = base[:31 - len(suffix)] + suffix
+                if candidate not in wb.sheetnames:
+                    return candidate
+                i += 1
+        except Exception as e:
+            logging.error(f"Failed to load workbook: {e}")
+            return base  # fallback
+
+    unique_sheet_name = get_unique_sheet_name(filename, base_name)
+
+    df = pd.DataFrame(data)
     if not os.path.exists(filename):
-        df = pd.DataFrame(data)
-        df.to_excel(filename, index=False, sheet_name=sheet_name)
+        df.to_excel(filename, index=False, sheet_name=unique_sheet_name)
     else:
-        df = pd.DataFrame(data)
-        with pd.ExcelWriter(filename, mode='a') as writer:
-            df.to_excel(writer, index=False, sheet_name=sheet_name)
+        with pd.ExcelWriter(filename, mode='a', engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name=unique_sheet_name)
 
-    logging.info(f"Data appended to {filename} in sheet {sheet_name}")
+    logging.info(f"Data saved to {filename} in sheet '{unique_sheet_name}'")
 
 def scrape_linkedin_post(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -539,7 +543,7 @@ def scrape_linkedin_post(html):
 
     return data
     
-def scrape_linkedin_posts_for_query(driver, query: str):
+def scrape_linkedin_posts_for_query(driver, query: str, max_results: int, sort_by_latest: bool = True):
     """
     Main scraping function that:
     1. Loads all posts through infinite scroll
@@ -549,7 +553,7 @@ def scrape_linkedin_posts_for_query(driver, query: str):
     cutoff_date = datetime.now() - timedelta(weeks=10)
     total_scrapped_posts = 0
 
-    def sort_by_latest(driver):
+    def sort_by_latest_function(driver):
         """
         Sort search results by most recent posts.
 
@@ -627,7 +631,7 @@ def scrape_linkedin_posts_for_query(driver, query: str):
     def should_stop_loading(posts):
         """Check loading stop conditions"""
         if len(posts) >= 1:
-            logging.info(f"Reached {MAX_POST_TO_FETCH} posts during loading")
+            logging.info(f"Reached {max_results} posts during loading")
             return True
         if posts:
             try:
@@ -642,18 +646,16 @@ def scrape_linkedin_posts_for_query(driver, query: str):
     scroll_attempts = 0
     max_attempts = 15
     previous_post_count = 0
-    MAX_POST_TO_FETCH = int(os.environ.get("MAX_POST_TO_FETCH", 18))
-    print(f"MAX_POST_TO_FETCH: {MAX_POST_TO_FETCH}")
     recent_posts_store = FixedSizeStore(10)
 
     
     try:
         perform_search(driver, query)
-        if os.getenv("SORT_BY_LATEST") == "True":
-            sort_by_latest(driver)
+        if sort_by_latest:
+            sort_by_latest_function(driver)
         time.sleep(2)
 
-        while scroll_attempts < max_attempts and total_scrapped_posts < MAX_POST_TO_FETCH:
+        while scroll_attempts < max_attempts and total_scrapped_posts < max_results:
             # Get current batch of posts and count
             current_posts = get_visible_posts()
             current_count = len(current_posts)
@@ -674,9 +676,9 @@ def scrape_linkedin_posts_for_query(driver, query: str):
                 for post in new_posts:
                     print("-" * 50)
                     print("-" * 50)
-                    if not keep_processing or total_scrapped_posts >= MAX_POST_TO_FETCH:
+                    if not keep_processing or total_scrapped_posts >= max_results:
                         logging.info(
-                            f"Reached {MAX_POST_TO_FETCH} posts or stopped processing"
+                            f"Reached {max_results} posts or stopped processing"
                         )
                         break
 
@@ -811,13 +813,14 @@ def scrape_linkedin_feed(
         logging.info("Successfully logged in to LinkedIn")
 
         # Process search queries
-        queries = read_queries_from_file(queries_file)
-        logging.info("Loaded %d search queries from %s", len(queries), queries_file)
+        queries_with_max_results = read_queries_from_file(queries_file)
+        logging.info("Loaded %d search queries from %s",
+                     len(queries_with_max_results), queries_file)
 
-        for query in queries:
+        for query, max_results, sort_by_latest in queries_with_max_results:
             try:
                 logging.info("Processing query: '%s'", query)
-                for batch in scrape_linkedin_posts_for_query(driver, query):
+                for batch in scrape_linkedin_posts_for_query(driver, query, max_results, sort_by_latest):
                     yield batch
                     all_posts.append(batch)
             except Exception as e:
@@ -840,7 +843,9 @@ def scrape_linkedin_feed(
 if __name__ == "__main__":
 
     current_dir = os.path.dirname(__file__)
-    QUERIES_FILE_PATH = os.path.join(current_dir, "search_queries.txt")
+    QUERIES_FILE_PATH = os.path.join(
+        current_dir, "search_queries.yaml")
+    print(f"Using queries file: {QUERIES_FILE_PATH}")
     for batch in scrape_linkedin_feed(
         username=os.getenv("LINKEDIN_USERNAME"),
         password=os.getenv("LINKEDIN_PASSWORD"),
