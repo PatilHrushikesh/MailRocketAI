@@ -1,0 +1,80 @@
+version: 1.1
+
+searches:
+  - name: "Python Hiring No Location"
+    enabled: true
+    sort_by_latest_option: 2
+    description: "Find non-senior technical leads in SaaS/Cloud companies"
+    max_results: 30
+    parameters:
+      includes:
+        keywords: ["Backend hiring"]
+      #   groups:
+      #     - operator: OR
+      #       terms: ["Software Engineer", "Software Developer", "SDE",]
+      # excludes:
+      #   keywords: ['intern'] 
+ 
+  - name: "Python hiring"
+    enabled: true
+    description: "Find non-senior technical leads in SaaS/Cloud companies"
+    max_results: 30
+    sort_by_latest_option: 2
+    parameters:
+      includes:
+        keywords: ["Backend hiring"]
+      #   groups:
+      #     - operator: OR
+      #       terms: ["Software Engineer", "Software Developer", "SDE"]
+      # excludes:
+      #   keywords: ['intern'] 
+    locations: [
+        "Warsaw",
+        "Dubai",
+        "Singapore",
+        "Amsterdam",
+        "Seoul",
+        "Tokyo",
+        "Sydney",
+        "London",
+        "Bangalore",
+        "Hyderabad"
+    ]
+
+
+  - name: "Golang Hiring"
+    enabled: true
+    description: "Golnag hiring"
+    max_results: 30
+    parameters:
+      includes:
+        keywords: ["Golang Hiring"]
+    locations: [
+        "Warsaw",
+        "Dubai",
+        "Singapore",
+        "Amsterdam",
+        "Seoul",
+        "Tokyo",
+        "Sydney",
+        "London",
+        "Bangalore",
+        "Hyderabad"
+    ]
+
+  # - name: "tech_lead_search"
+  #   enabled: false
+  #   description: "Find non-senior technical leads in SaaS/Cloud companies"
+  #   max_results: 50  # New field
+  #   parameters:
+  #     includes:
+  #       keywords: ["tech lead", engineer]
+  #       exact_phrases: ["cloud infrastructure"]
+  #       groups:
+  #         - operator: OR
+  #           terms: ["SaaS", "PaaS", "IaaS"]
+          
+  #     excludes:
+  #       keywords: [senior, manager]
+  #   locations: ["United States", "Canada"]
+  #   industries: ["Information Technology", "Computer Software"]
