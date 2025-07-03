@@ -818,7 +818,8 @@ def scrape_linkedin_feed(
     save_path: Optional[str] = OUTPUT_EXCEL_FILE,
 ) -> Generator[List[Dict], None, None]:
     """
-    Scrapes LinkedIn posts based on search queries and yields batches of results
+    Scrapes LinkedIn posts based on search queries and yields batches of results.
+    Creates a new browser instance for each query to avoid session issues.
 
     Args:
             username: LinkedIn account username
@@ -834,41 +835,56 @@ def scrape_linkedin_feed(
             RuntimeError: For authentication failures or critical errors
             ValueError: For missing required parameters
     """
-    driver = None
     all_posts = []
 
     try:
-        # Initialize browser and login
-        driver = initialize_and_login(username, password, config)
-
         # Process search queries
         queries_with_max_results = read_queries_from_file(queries_file)
         logging.info("Loaded %d search queries from %s",
                      len(queries_with_max_results), queries_file)
 
         for query, max_results, sort_by_latest in queries_with_max_results:
+            driver = None
             try:
-                logging.info("Processing query: '%s'", query)
+                logging.info(
+                    "Processing query: '%s' - Initializing new browser instance", query)
+
+                # Initialize new browser and login for each query
+                driver = initialize_and_login(username, password, config)
+
+                # Process the current query
+                query_posts = []
                 for batch in scrape_linkedin_posts_for_query(driver, query, max_results, sort_by_latest):
                     yield batch
-                    all_posts.append(batch)
+                    query_posts.extend(batch)
+
+                # Save results for this query to Excel with query-specific sheet name
+                sheet_name = query.replace(
+                    " ", "_")[:20] + "_" + datetime.now().strftime("%d_%b_%y")
+                save_to_excel(query_posts, save_path, sheet_name)
+                logging.info("Saved %d posts for query '%s' to sheet '%s'",
+                             len(query_posts), query, sheet_name)
+
+                # Add to all posts collection
+                all_posts.extend(query_posts)
+
             except Exception as e:
                 logging.error(
                     "Failed to process query '%s': %s", query, str(e))
                 continue
+            finally:
+                # Always close the browser instance for this query
+                if driver:
+                    driver.quit()
+                    logging.info(
+                        "Browser instance closed for query: '%s'", query)
 
-        # Save all posts to Excel in new sheet with date as 3-jan_query
-        sheet_name = query + "_" + datetime.now().strftime("%d_%b_%y")
-        save_to_excel(all_posts, save_path, sheet_name)
-        logging.info("Saved %d total posts to %s", len(all_posts), save_path)
+        logging.info(
+            "Completed processing all queries. Total posts scraped: %d", len(all_posts))
 
     except Exception as e:
         logging.error("Scraping process failed: %s", str(e))
         raise RuntimeError(f"Scraping terminated: {str(e)}") from e
-    finally:
-        if driver:
-            driver.quit()
-            logging.info("Browser instance closed")
 
 
 if __name__ == "__main__":
