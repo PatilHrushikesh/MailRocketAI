@@ -28,5 +28,11 @@
 				"travel_requirements": "string (e.g., '30% travel')",
 				"other": {"key": "value pairs for remaining data"}
 			}
+		},
+		{
+			same structured report in JSON format for each job posting
+		},
+		{
+			same structured report in JSON format for each job posting
 		}
 	]

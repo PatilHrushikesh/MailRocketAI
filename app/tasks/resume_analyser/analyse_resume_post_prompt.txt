@@ -45,11 +45,12 @@ Final and most important:
 Discrepancies (e.g., job titles not matching) or other noteworthy details.
 
 	Consider following edge cases:
-	Most important: There might be multiple job postings, and each one should be evaluated separately.
+	Most important: There might be multiple job postings, and each one should be evaluated separately, give Output as list of json output
 	1. If a job posting does not include any application mechanism (email, link, or phone number), reject it.
 	2. Keep null values for fields that are not specified in the job posting.
 	3. My preference order is Python Developers, Golang Developer, Java Developer
 	4. You must always replace placeholders with actual values
 	
 Output Format
-For each job posting, return a JSON object in the following structure:
+For each job posting, output a valid JSON object, containing lists
+Return only the JSON object—nothing else. The output must begin with '{' and end with '}'.

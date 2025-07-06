@@ -5,8 +5,6 @@ You will receive:
 
 MESSEGE_CONTENT: Initial email text with candidate details (e.g., work, projects). The signature includes the candidate’s full name and phone number.
 RESUME CONTENT: Candidate’s resume in plain text.
-RESUME_URL: Link to the candidate’s resume.
-LINKEDIN_PROFILE_URL: Link to the candidate’s LinkedIn profile (plaintext).
 JOB POSTINGS: Job post as plain text.
 LINKEDIN_PROFILE_URL: candidates linkedin profile
 Processing Rules
@@ -31,18 +29,10 @@ Select one project from plaintext_resume using technologies listed in json_job_p
 Include quantifiable results (e.g., "Improved throughput by 40%").
 Call to Action (CTA):
 Provide a specific value proposition tailored to the job post.
-Closer:
-Include:
-my Resume: [resume_url]
+Dont Write any closer. Dont say, Thanks, Regards or anything like that
 
-LinkedIn: [linkedin_profile_url]
-
-Thanks, [Full Name]
-
-[Phone]
-Extract [Full Name] and [Phone] from the signature in message_content.
-Use URLs as plaintext (no hyperlinks).
 Content Requirements
+DONT WRITE ANY CLOSER
 Word Limit: Strictly under 150 words.
 Formatting: Two newlines between paragraphs.
 Placeholders: Replace all placeholders in message_content with relevant data.
@@ -62,10 +52,4 @@ Tailor content to job post requirements (e.g., resolve placeholders like [Compan
 Output Format
 Return a JSON object with:
 "subject": The formatted subject line.
-"body": The complete email text (greeting, paragraphs, closer), under 150 words.
-Example Output
-
-{
-  "subject": "Application for Backend Engineer at Spotify",
-  "body": "Hi Sarah,\n\nAs a Go/Python Developer at Rakuten with 3+ years in Kubernetes and distributed systems, I’m excited to apply for the Backend Engineer role.\n\nI built a Golang microservice handling 10M+ daily requests with 99.99% uptime, improving throughput by 40%.\n\nI'd welcome discussing how my experience in scalable architectures could benefit Spotify's payment infrastructure.\n\nHere's my Resume: https://resume.example.com\nLinkedIn: https://linkedin.com/in/johndoe\nThanks, John Doe\n555-123-4567"
-}
+"body": The complete email text (greeting, paragraphs), under 150 words. DONT Include CLOSER
