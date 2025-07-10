@@ -3,7 +3,7 @@ LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/hrushikesh-patil-345a1219a/"
 PHONE_NUMBER = "+91 7249255271"
 
 
-SUBJECT_POSTFIX = " | 3 YoE | Python, Golang"
+SUBJECT_POSTFIX = " | 3 YoE | Python, Golang | LWD 18-Aug"
 
 BODY_CLOSER = f"""\n
 Here's my resume: {RESUME_URL}
