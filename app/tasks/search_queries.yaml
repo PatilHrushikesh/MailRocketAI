@@ -12,8 +12,8 @@ searches:
       #   groups:
       #     - operator: OR
       #       terms: ["Software Engineer", "Software Developer", "SDE",]
-      # excludes:
-      #   keywords: ['intern'] 
+      excludes:
+        keywords: ['Nutanix'] 
  
   - name: "Python hiring"
     enabled: true
@@ -26,19 +26,19 @@ searches:
       #   groups:
       #     - operator: OR
       #       terms: ["Software Engineer", "Software Developer", "SDE"]
-      # excludes:
-      #   keywords: ['intern'] 
+      excludes:
+        keywords: ['Nutanix'] 
     locations: [
-        "Warsaw",
-        "Dubai",
         "Singapore",
+        "Bangalore",
+        "Warsaw",
+        "Hyderabad",
+        "Dubai",
         "Amsterdam",
         "Seoul",
         "Tokyo",
         "Sydney",
         "London",
-        "Bangalore",
-        "Hyderabad"
     ]
 
 
@@ -49,6 +49,8 @@ searches:
     parameters:
       includes:
         keywords: ["Golang Hiring"]
+      excludes:
+        keywords: ['Nutanix'] 
     locations: [
         "Warsaw",
         "Dubai",
@@ -66,7 +68,7 @@ searches:
   #   enabled: false
   #   description: "Find non-senior technical leads in SaaS/Cloud companies"
   #   max_results: 50  # New field
-  #   parameters:
+    # parameters:
   #     includes:
   #       keywords: ["tech lead", engineer]
   #       exact_phrases: ["cloud infrastructure"]
@@ -74,7 +76,7 @@ searches:
   #         - operator: OR
   #           terms: ["SaaS", "PaaS", "IaaS"]
           
-  #     excludes:
-  #       keywords: [senior, manager]
+      # excludes:
+      #   keywords: ['Nutanix'] 
   #   locations: ["United States", "Canada"]
   #   industries: ["Information Technology", "Computer Software"]

@@ -82,7 +82,7 @@ def send_email_task_from_db(db_path=linkedin_db_path):
                 job_data_json, send_email_via_gmail_api, job_post
             )
             print(f"[{row['analysis_id']}] {reason}")
-            time.sleep(2)
+            time.sleep(4)
 
 
             # convert final_decision to int
