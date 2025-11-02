@@ -128,7 +128,7 @@ def decide_and_send_email(job_data, send_email_function, job_post):
         print(f"❌ Failed to update application history: {str(e)}")
 
     print("\n📩 Sending confirmation email to myself")
-    my_email = "prohrushi@gmail.com"
+    my_email = "<YOUR EMAIL>"
     response = send_email_function(subject, body, my_email, from_mail, pdf_file_path=os.getenv("resume_pdf_path"))
     print("✅ Confirmation email sent" if response else "❌ Failed to send confirmation email")
 
