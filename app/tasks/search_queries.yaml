@@ -2,7 +2,7 @@ version: 1.1
 
 searches:
   - name: "Python Hiring No Location"
-    enabled: true
+    enabled: false
     sort_by_latest_option: 2
     description: "Find non-senior technical leads in SaaS/Cloud companies"
     max_results: 30
@@ -26,13 +26,11 @@ searches:
       #   groups:
       #     - operator: OR
       #       terms: ["Software Engineer", "Software Developer", "SDE"]
-      excludes:
-        keywords: ['Nutanix'] 
+      # excludes:
+      #   keywords: ['Nutanix'] 
     locations: [
         "Singapore",
-        "Bangalore",
         "Warsaw",
-        "Hyderabad",
         "Dubai",
         "Amsterdam",
         "Seoul",
@@ -49,8 +47,8 @@ searches:
     parameters:
       includes:
         keywords: ["Golang Hiring"]
-      excludes:
-        keywords: ['Nutanix'] 
+      # excludes:
+      #   keywords: ['Nutanix'] 
     locations: [
         "Warsaw",
         "Dubai",
@@ -60,8 +58,6 @@ searches:
         "Tokyo",
         "Sydney",
         "London",
-        "Bangalore",
-        "Hyderabad"
     ]
 
   # - name: "tech_lead_search"

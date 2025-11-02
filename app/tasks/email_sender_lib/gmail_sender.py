@@ -112,18 +112,18 @@ if __name__ == '__main__':
 		response = send_email_via_gmail_api(
 			subject="Important Notification",
 			body="This is a production email sent via Gmail API",
-			to_email="prohrushi@gmail.com",
-			from_email="prohrushi@gmail.com"
+			to_email=<YOUR EMAIL>,
+			from_email=<YOUR EMAIL>
 		)
 		print(f"Email sent successfully! Message ID: {response}")
 
 		# Example 2: Send email with PDF attachment
-		pdf_path = "D:\\Projects\\linkedin_mail_sender\\Hrushikesh_Patil_Resume.pdf"
+		pdf_path = <PATH TO RESUME PDF>
 		response_with_pdf = send_email_via_gmail_api(
 			subject="Document Attached",
 			body="Please find the attached PDF document.",
-			to_email="prohrushi@gmail.com",
-			from_email="prohrushi@gmail.com",
+			to_email=<YOUR EMAIL>,
+			from_email=<YOUR EMAIL>,
 			pdf_file_path=pdf_path
 		)
 		print(f"Email with PDF sent successfully! Message ID: {response_with_pdf}")
