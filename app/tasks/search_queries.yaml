@@ -13,7 +13,7 @@ searches:
       #     - operator: OR
       #       terms: ["Software Engineer", "Software Developer", "SDE",]
       excludes:
-        keywords: ['Nutanix'] 
+        keywords: ['Goolge'] 
  
   - name: "Python hiring"
     enabled: true
@@ -27,7 +27,7 @@ searches:
       #     - operator: OR
       #       terms: ["Software Engineer", "Software Developer", "SDE"]
       # excludes:
-      #   keywords: ['Nutanix'] 
+      #   keywords: ['Google'] 
     locations: [
         "Singapore",
         "Warsaw",
@@ -36,7 +36,7 @@ searches:
         "Seoul",
         "Tokyo",
         "Sydney",
-        "London",
+        "London",j
     ]
 
 
@@ -48,7 +48,7 @@ searches:
       includes:
         keywords: ["Golang Hiring"]
       # excludes:
-      #   keywords: ['Nutanix'] 
+      #   keywords: ['Google'] 
     locations: [
         "Warsaw",
         "Dubai",
@@ -73,6 +73,6 @@ searches:
   #           terms: ["SaaS", "PaaS", "IaaS"]
           
       # excludes:
-      #   keywords: ['Nutanix'] 
+      #   keywords: ['Google'] 
   #   locations: ["United States", "Canada"]
   #   industries: ["Information Technology", "Computer Software"]
