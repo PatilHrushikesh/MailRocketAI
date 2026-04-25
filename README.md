@@ -87,6 +87,64 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
    make init-db
    ```
 
+## Search queries
+
+`config/search_queries.yaml` is committed to the repo — it is not secret —
+and defines the LinkedIn searches the `scrape` stage runs. Each entry is
+compiled into one or more LinkedIn search URLs at runtime.
+
+Minimal example (taken from the shipped file):
+
+```yaml
+searches:
+  - name: "Golang Hiring"
+    enabled: true
+    max_results: 30
+    parameters:
+      includes:
+        keywords: ["Golang Hiring"]
+    locations: [Warsaw, London, Singapore]
+```
+
+Per-search fields:
+
+| Field                                 | Default    | Notes                                                                        |
+| ------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| `name`                                | _required_ | Display name; used in logs and grouping.                                     |
+| `enabled`                             | `true`     | Set to `false` to skip without deleting the entry.                           |
+| `description`                         | –          | Free text for humans, ignored by the code.                                   |
+| `max_results`                         | `10`       | Hard cap on posts per generated query.                                       |
+| `sort_by_latest_option`               | `0`        | `0` = relevance only, `1` = latest only, `2` = run both passes.              |
+| `parameters.includes.keywords`        | –          | Words ANDed into the search.                                                 |
+| `parameters.includes.exact_phrases`   | –          | Same, wrapped in quotes (LinkedIn treats them as exact matches).             |
+| `parameters.includes.groups`          | –          | Boolean groups for OR / nested AND clauses (see below).                      |
+| `parameters.excludes.*`               | –          | Same shape as `includes`; each term is joined with `NOT`.                    |
+| `industries`                          | –          | List of strings emitted as a single `(A OR B OR ...)` clause on the include side. |
+| `locations`                           | –          | One query is fired per location, suffixed with `AND "<loc>"`. Omit for an unscoped search. |
+
+A `groups` entry lets you express OR / nested AND combinations:
+
+```yaml
+parameters:
+  includes:
+    groups:
+      - operator: OR
+        terms:
+          - "Python"
+          - "FastAPI"
+          - group:                # nesting
+              operator: AND
+              terms: ["Django", "REST"]
+```
+
+becomes `(Python OR FastAPI OR (Django AND REST))`.
+
+Total LinkedIn requests per search ≈
+`max(len(locations), 1) × (2 if sort_by_latest_option == 2 else 1)`.
+Each request is gated by `scraper.per_query_delay_seconds` in
+`config.yaml`, so a search with 8 locations and `sort_by_latest_option: 2`
+fires 16 queries.
+
 ## How it works
 
 ```
