@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% macro tag_link(label) -%}
+<a class="tag" href="https://www.linkedin.com/feed/hashtag/?keywords={{ label.lstrip('#')|urlencode }}" target="_blank" rel="noopener noreferrer">{{ label if label.startswith('#') else '#' ~ label }}</a>
+{%- endmacro %}
+
+{% block main %}
+<aside class="pane pane-list" aria-label="Post list">
+  <div class="pane-header">
+    <h2>Posts</h2>
+    <span class="pane-count">{{ cards|length }}</span>
+  </div>
+
+  <form class="list-filters" method="get" action="/" data-autosubmit>
+    <input type="hidden" name="status" value="{{ filter_status }}" />
+    {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}" />{% endif %}
+
+    <div class="lf-row">
+      <label class="lf-field">
+        <span>Match ≥</span>
+        <div class="input-with-suffix lf-num">
+          <input type="number" name="min_match" min="0" max="100" step="1"
+                 value="{{ min_match if min_match else '' }}" placeholder="0" />
+          <span class="suffix">%</span>
+        </div>
+      </label>
+      <label class="lf-field">
+        <span>Sort</span>
+        <select name="sort">
+          <option value="latest"     {% if sort_by == 'latest' %}selected{% endif %}>Latest first</option>
+          <option value="oldest"     {% if sort_by == 'oldest' %}selected{% endif %}>Oldest first</option>
+          <option value="match_desc" {% if sort_by == 'match_desc' %}selected{% endif %}>Match high→low</option>
+          <option value="match_asc"  {% if sort_by == 'match_asc' %}selected{% endif %}>Match low→high</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="lf-field">
+      <span>Company</span>
+      <input type="text" name="company" list="company-list"
+             value="{{ company_filter }}" placeholder="any company" />
+    </label>
+    <datalist id="company-list">
+      {% for name in companies %}<option value="{{ name }}"></option>{% endfor %}
+    </datalist>
+
+    <div class="lf-actions">
+      <button type="submit" class="btn btn-ghost btn-small">Apply</button>
+      {% if min_match or company_filter or (sort_by and sort_by != 'latest') %}
+        <a class="btn btn-ghost btn-small"
+           href="?status={{ filter_status }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+          Clear
+        </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <ol class="post-list">
+    {% if not cards %}
+      <li class="empty">No posts match this filter.</li>
+    {% endif %}
+    {% for c in cards %}
+      <li>
+        <a
+          class="post-card {% if c.uid == selected_uid %}is-selected{% endif %}"
+          href="?status={{ filter_status }}{% if base_params %}&{{ base_params|urlencode }}{% endif %}&uid={{ c.uid }}"
+          aria-current="{{ 'true' if c.uid == selected_uid else 'false' }}"
+        >
+          <div class="post-card-row">
+            <span class="post-card-author">{{ c.author }}</span>
+            <span class="post-card-uid">#{{ c.uid }}</span>
+          </div>
+          <div class="post-card-snippet">{{ c.snippet or '(no text)' }}</div>
+          <div class="post-card-row post-card-meta">
+            {% if c.has_analysis %}
+              {% if c.match_percentage is not none %}
+                <span class="badge badge-match">{{ c.match_percentage }}% match</span>
+              {% endif %}
+              {% if c.company_name %}
+                <span class="badge badge-company" title="{{ c.company_name }}">{{ c.company_name }}</span>
+              {% endif %}
+              <span class="badge badge-{{ c.mail_status.tone }}">{{ c.mail_status.label }}</span>
+            {% else %}
+              <span class="badge badge-muted">Not analyzed</span>
+            {% endif %}
+          </div>
+        </a>
+      </li>
+    {% endfor %}
+  </ol>
+</aside>
+
+<section class="pane pane-edit" aria-label="Analysis editor">
+  {% if detail and detail.primary %}
+    {% set a = detail.primary %}
+    <div class="pane-header">
+      <div>
+        <h2>Analysis #{{ a.analysis_id }} <span class="muted">— editable</span></h2>
+        <span class="model-pill" title="LLM that produced this draft">{{ a.model_used or 'unknown model' }}</span>
+      </div>
+      <div class="analysis-actions">
+        <button type="button" class="btn btn-ghost" data-action="reset">Reset</button>
+        <button type="button" class="btn btn-primary" data-action="save">Save (⌘S)</button>
+      </div>
+    </div>
+
+    <form class="analysis-form" data-analysis-id="{{ a.analysis_id }}" autocomplete="off">
+
+      <fieldset class="form-section">
+        <legend>Key fields</legend>
+
+        <label class="field">
+          <span>Company</span>
+          <input type="text" name="company_name" value="{{ a.company_name or '' }}" placeholder="e.g. Aryan Solutions" />
+        </label>
+
+        <div class="grid-2">
+          <label class="field">
+            <span>Match %</span>
+            <div class="input-with-suffix">
+              <input type="number" name="match_percentage" min="0" max="100" value="{{ a.match_percentage if a.match_percentage is not none else '' }}" />
+              <span class="suffix">%</span>
+            </div>
+          </label>
+          <label class="field">
+            <span>Should apply</span>
+            <select name="should_apply">
+              <option value="" {% if a.should_apply is none %}selected{% endif %}>—</option>
+              <option value="true"  {% if a.should_apply %}selected{% endif %}>Yes</option>
+              <option value="false" {% if a.should_apply is not none and not a.should_apply %}selected{% endif %}>No</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field field-emph">
+          <span>Subject <em class="req">*</em></span>
+          <input type="text" name="subject" value="{{ a.subject or '' }}" placeholder="Application for ..." />
+        </label>
+
+        <label class="field field-emph">
+          <span>Body <em class="req">*</em></span>
+          <textarea name="body" rows="14" spellcheck="true" placeholder="Dear ...">{{ a.body or '' }}</textarea>
+        </label>
+      </fieldset>
+
+      <fieldset class="form-section form-section-secondary">
+        <legend>Contacts</legend>
+
+        <label class="field">
+          <span>Contact emails <em class="muted">(comma separated)</em></span>
+          <input type="text" name="contact_email" value="{{ a.contact_email|join(', ') if a.contact_email else '' }}" placeholder="hr@example.com, careers@example.com" />
+        </label>
+
+        <label class="field">
+          <span>Contact numbers <em class="muted">(comma separated)</em></span>
+          <input type="text" name="contact_number" value="{{ a.contact_number|join(', ') if a.contact_number else '' }}" />
+        </label>
+
+        <label class="field">
+          <span>Application links <em class="muted">(comma separated)</em></span>
+          <input type="text" name="application_link" value="{{ a.application_link|join(', ') if a.application_link else '' }}" />
+        </label>
+      </fieldset>
+
+      <fieldset class="form-section form-section-secondary">
+        <legend>Decision &amp; status</legend>
+
+        <div class="grid-2">
+          <label class="field">
+            <span>Experience gap (years)</span>
+            <input type="number" name="experience_gap" min="-20" max="50" value="{{ a.experience_gap if a.experience_gap is not none else '' }}" />
+          </label>
+          <label class="field">
+            <span>Final decision</span>
+            <select name="final_decision">
+              <option value="false" {% if not a.final_decision %}selected{% endif %}>No</option>
+              <option value="true"  {% if a.final_decision %}selected{% endif %}>Yes</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Mail status</span>
+          <select name="mail_sent">
+            <option value="-1" {% if a.mail_sent == -1 %}selected{% endif %}>Pending (-1)</option>
+            <option value="0"  {% if a.mail_sent == 0 %}selected{% endif %}>Rejected (0)</option>
+            <option value="1"  {% if a.mail_sent == 1 %}selected{% endif %}>Sent (1)</option>
+          </select>
+        </label>
+      </fieldset>
+    </form>
+
+    {% if a.full_analysis_json %}
+      <details class="raw">
+        <summary>Full analysis JSON (read only)</summary>
+        <pre>{{ a.full_analysis_json|tojson_pretty }}</pre>
+      </details>
+    {% endif %}
+
+    {% if detail.analyses|length > 1 %}
+      <details class="raw">
+        <summary>Older analyses ({{ detail.analyses|length - 1 }})</summary>
+        <ul class="older-list">
+          {% for older in detail.analyses[1:] %}
+            <li>
+              #{{ older.analysis_id }} — {{ older.model_used or 'unknown' }} —
+              {{ older.match_percentage if older.match_percentage is not none else '?' }}% —
+              {{ older.mail_status.label }}
+              ({{ older.inserted_at }})
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+
+  {% elif detail %}
+    <div class="empty-state">
+      <h2>No analysis yet</h2>
+      <p>Run <code>make analyze</code> to generate one for this post.</p>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>Select a post</h2>
+      <p>Analyses for the selected post will appear here.</p>
+    </div>
+  {% endif %}
+</section>
+
+<aside class="pane pane-detail" aria-label="Post detail">
+  {% if detail %}
+    {% set p = detail.post %}
+    <div class="pane-header">
+      <h2>Post #{{ p.uid }} <span class="muted">— read only</span></h2>
+      <a class="btn btn-primary"
+         href="{{ p.post_link }}"
+         target="_blank"
+         rel="noopener noreferrer">
+        Open on LinkedIn ↗
+      </a>
+    </div>
+
+    <article class="li-post">
+      <header class="li-post-header">
+        {% set initials = (p.author_name[:1] | upper) if p.author_name else '?' %}
+        {% if p.profile_url %}
+          <a class="li-avatar" href="{{ p.profile_url }}" target="_blank" rel="noopener noreferrer" aria-label="Profile">{{ initials }}</a>
+        {% else %}
+          <span class="li-avatar" aria-hidden="true">{{ initials }}</span>
+        {% endif %}
+        <div class="li-author">
+          <div class="li-author-name">
+            {% if p.profile_url %}
+              <a href="{{ p.profile_url }}" target="_blank" rel="noopener noreferrer">{{ p.author_name or '—' }}</a>
+            {% else %}
+              {{ p.author_name or '—' }}
+            {% endif %}
+          </div>
+          <div class="li-author-sub">Hiring · via search</div>
+          <div class="li-author-meta">
+            <span title="{{ p.post_date }}">{{ p.post_date or '—' }}</span>
+            <span class="dot">·</span>
+            <span aria-label="Public">🌐</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="li-post-body">{{ p.post_text or '(empty)' }}</div>
+
+      {% if p.hashtags %}
+        <div class="li-post-tags">
+          {% for h in p.hashtags %}{{ tag_link(h) }} {% endfor %}
+        </div>
+      {% endif %}
+
+      <footer class="li-post-footer">
+        <span class="li-stat">
+          <span class="li-reactions">👍 ❤️ 🎉</span>
+          <span>{{ p.reactions or 'No reactions' }}</span>
+        </span>
+        <span class="li-stat">💬 {{ p.comments if p.comments is not none else '0 comments' }}</span>
+      </footer>
+    </article>
+
+    <dl class="kv">
+      <dt>Search query</dt>
+      <dd><code>{{ p.query or '—' }}</code></dd>
+
+      <dt>Captured</dt>
+      <dd>{{ p.inserted_at or '—' }}</dd>
+
+      <dt>Analyzed</dt>
+      <dd>{{ 'Yes' if p.analysed else 'No' }}</dd>
+    </dl>
+
+    <details class="raw">
+      <summary>Direct LinkedIn URL</summary>
+      <code class="break">{{ p.post_link }}</code>
+    </details>
+  {% else %}
+    <div class="empty-state">
+      <h2>No post selected</h2>
+      <p>Pick a post from the list to inspect it.</p>
+    </div>
+  {% endif %}
+</aside>
+{% endblock %}

@@ -1,4 +1,4 @@
-.PHONY: help install init-db scrape analyze send dry-send pipeline run clean lint test-models
+.PHONY: help install init-db scrape analyze send dry-send pipeline run ui clean lint test-models
 
 PY ?= $(shell command -v python3 2>/dev/null || command -v python)
 
@@ -28,6 +28,9 @@ dry-send:  ## Show what `send` would do without contacting Gmail
 
 run:  ## scrape + analyze + send in one shot
 	$(PY) -m mailrocket run-all
+
+ui:  ## Launch the web review UI on http://127.0.0.1:8765
+	$(PY) -m mailrocket ui
 
 test-models:  ## Ping every configured LLM with a tiny prompt and print a summary
 	$(PY) scripts/test_models.py

@@ -34,6 +34,20 @@ def _get_iter():
     return _MODEL_ITER
 
 
+def _normalize_result(result) -> list[dict] | None:
+    """Coerce the parsed LLM output into a list-of-dicts.
+
+    Returns None if the shape isn't recognisable (caller should treat as a
+    model failure and try the next one).
+    """
+    if isinstance(result, dict):
+        return [result]
+    if isinstance(result, list):
+        dicts = [r for r in result if isinstance(r, dict)]
+        return dicts or None
+    return None
+
+
 def _invoke(prompt, params: dict) -> Tuple[list, dict]:
     """Try models in order; return the first successful (parsed_result, model_info)."""
     models = list(settings.llm.models)
@@ -51,11 +65,19 @@ def _invoke(prompt, params: dict) -> Tuple[list, dict]:
             llm = get_llm(current)
             chain = prompt | llm | JsonOutputParser()
             result = chain.invoke(params)
-            return ([result] if isinstance(result, dict) else result), current
         except Exception as e:
             logger.warning("Model %s failed: %s", current["name"], e)
             logger.debug("Traceback: %s", traceback.format_exc())
             continue
+
+        normalized = _normalize_result(result)
+        if normalized is None:
+            logger.warning(
+                "Model %s returned unexpected shape %s; cycling to next model",
+                current["name"], type(result).__name__,
+            )
+            continue
+        return normalized, current
 
     error_result = [{
         "model_name": last_model["name"],

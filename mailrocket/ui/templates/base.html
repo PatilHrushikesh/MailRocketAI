@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{% block title %}MailRocket Review{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-name">MailRocket</span>
+    <span class="brand-tag">review</span>
+  </div>
+  <div class="filters">
+    <nav class="filter-pills" aria-label="Filter posts">
+      {% set tabs = [
+        ('all',        'All',        counts.all),
+        ('unanalyzed', 'Unanalyzed', counts.unanalyzed),
+        ('pending',    'Pending',    counts.pending),
+        ('sent',       'Sent',       counts.sent),
+        ('rejected',   'Rejected',   counts.rejected),
+      ] %}
+      {% for slug, label, count in tabs %}
+        <a
+          class="pill {% if filter_status == slug %}is-active{% endif %}"
+          href="?status={{ slug }}{% if base_params %}&{{ base_params|urlencode }}{% endif %}"
+          aria-current="{{ 'page' if filter_status == slug else 'false' }}"
+        >
+          {{ label }}<span class="pill-count">{{ count }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+    <form class="filter-search" method="get" action="/">
+      <input type="hidden" name="status" value="{{ filter_status }}" />
+      {% if min_match %}<input type="hidden" name="min_match" value="{{ min_match }}" />{% endif %}
+      {% if company_filter %}<input type="hidden" name="company" value="{{ company_filter }}" />{% endif %}
+      {% if sort_by and sort_by != 'latest' %}<input type="hidden" name="sort" value="{{ sort_by }}" />{% endif %}
+      <input
+        class="search"
+        type="search"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Search post text, author, company, query..."
+        aria-label="Search posts"
+      />
+    </form>
+  </div>
+  <div class="topbar-actions">
+    <label class="auto-refresh" title="Reload the page automatically. Pauses while analysis edits are unsaved.">
+      <span>Auto-refresh</span>
+      <select id="auto-refresh-select" aria-label="Auto-refresh interval">
+        <option value="0">Off</option>
+        <option value="2">2s</option>
+        <option value="5">5s</option>
+        <option value="10">10s</option>
+        <option value="30">30s</option>
+        <option value="60">1m</option>
+      </select>
+      <span id="auto-refresh-status" class="auto-refresh-status" aria-live="polite"></span>
+    </label>
+    <button type="button" id="manual-reload" class="btn btn-icon" title="Reload now">
+      <span aria-hidden="true">↻</span>
+      <span class="sr-only">Reload</span>
+    </button>
+    <span class="meta" title="{{ db_path }}">{{ candidate_name or 'MailRocket' }}</span>
+  </div>
+</header>
+
+<main class="layout">
+  {% block main %}{% endblock %}
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="{{ url_for('static', path='app.js') }}" defer></script>
+</body>
+</html>

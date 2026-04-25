@@ -116,6 +116,21 @@ Or run everything in one shot:
 make run
 ```
 
+## Review UI
+
+A small FastAPI app for inspecting captured posts and tweaking the
+LLM-generated drafts before they go out:
+
+```
+make ui                              # http://127.0.0.1:8765
+```
+
+The layout is three panes: a filterable post list on the left, the
+read-only post detail in the middle (with a one-click "Open on LinkedIn"
+deep-link), and the editable analysis on the right (subject, body,
+contacts, match %, mail status, ...). Cmd/Ctrl-S saves the current
+analysis.
+
 ## CLI subcommands
 
 ```
@@ -125,6 +140,7 @@ python -m mailrocket analyze         # only analyze pending posts
 python -m mailrocket send [--dry-run]
 python -m mailrocket pipeline        # scrape + analyze
 python -m mailrocket run-all         # scrape + analyze + send
+python -m mailrocket ui              # web review UI
 ```
 
 Common flag: `--log-level DEBUG`.

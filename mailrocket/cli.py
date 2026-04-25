@@ -49,6 +49,14 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     runall.add_argument("--dry-run", action="store_true")
 
+    ui = sub.add_parser(
+        "ui",
+        help="Launch the web review UI (read-only posts, editable analyses)",
+    )
+    ui.add_argument("--host", default="127.0.0.1", help="Bind address (default 127.0.0.1)")
+    ui.add_argument("--port", type=int, default=8765, help="Port (default 8765)")
+    ui.add_argument("--reload", action="store_true", help="Enable auto-reload (dev)")
+
     return p
 
 
@@ -104,6 +112,13 @@ def main(argv: list[str] | None = None) -> int:
             n, a, s, r = run_all(dry_run=args.dry_run)
             label = "[dry-run] " if args.dry_run else ""
             print(f"{label}Scraped {n}, analyzed {a}, sent {s}, rejected {r}.")
+            return 0
+
+        if args.command == "ui":
+            from mailrocket.ui import run as run_ui
+
+            print(f"Serving review UI at http://{args.host}:{args.port}")
+            run_ui(host=args.host, port=args.port, reload=args.reload)
             return 0
 
         return 1
