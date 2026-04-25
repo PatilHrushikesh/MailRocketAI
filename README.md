@@ -8,6 +8,85 @@ The system is intentionally a single sequential Python pipeline. There is
 no Celery, no Redis, and no Docker. The architecture is organised so any of
 those can be added later without touching business logic.
 
+## Setup
+
+This project uses [uv](https://docs.astral.sh/uv/) for environment and
+dependency management. If you don't have it yet:
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+1. Install dependencies (creates `.venv/` and pins from `uv.lock`):
+
+   ```
+   make sync          # or: uv sync
+   ```
+
+   uv will read `.python-version` and provision the matching interpreter
+   automatically if needed.
+
+2. Create your config files from the templates:
+
+   ```
+   cp config/config.example.yaml   config/config.yaml
+   cp config/secrets.example.yaml  config/secrets.yaml
+   ```
+
+   Edit both. `config.yaml` holds plain text (URLs, phone, email defaults,
+   filter thresholds, model list). `secrets.yaml` holds your LinkedIn
+   credentials, LLM provider API keys, and Gmail OAuth file paths. Both
+   files are gitignored.
+
+   All API keys go in `config/secrets.yaml`. You only need keys for the
+   LLM providers you actually want to use — the model rotation in
+   `config.yaml -> llm.models` automatically skips providers whose key is
+   empty. **Gemini + Groq is enough to get started**; the rest are
+   optional fallbacks with their own free tiers.
+
+   | Key in `config/secrets.yaml`     | Where to get it                                                                       | Notes                                  |
+   | -------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------- |
+   | `linkedin.username` / `password` | Your LinkedIn login                                                                   | required for `scrape`                  |
+   | `gemini_api_key`                 | [Google AI Studio](https://aistudio.google.com/app/apikey)                            | recommended primary                    |
+   | `groq_api_key`                   | [Groq Console](https://console.groq.com/keys)                                         | recommended fallback, very fast        |
+   | `cerebras_api_key`               | [Cerebras Cloud](https://cloud.cerebras.ai)                                           | optional, ~14.4K req/day free          |
+   | `mistral_api_key`                | [Mistral La Plateforme](https://console.mistral.ai/api-keys)                          | optional, ~1B tokens/month free        |
+   | `openrouter_api_key`             | [OpenRouter](https://openrouter.ai/keys)                                              | optional, mixed free models            |
+   | `github_token`                   | [GitHub PAT](https://github.com/settings/tokens) with `models:read` scope             | optional, unlocks gpt-4o / o3-mini     |
+   | `gmail.client_secret_path`       | Google Cloud Console — see step 4 below for the full flow                             | required for `send`                    |
+
+   Any of these can also be supplied via an env var named
+   `MAILROCKET_SECRET_<UPPER_KEY>` (e.g.
+   `MAILROCKET_SECRET_GEMINI_API_KEY=...`) instead of editing the file —
+   see [Configuration overrides](#configuration-overrides) below.
+
+3. Drop your resume in `data/`:
+
+   ```
+   cp data/resume.example.txt data/resume.txt   # then edit
+   cp /path/to/your-cv.pdf    data/resume.pdf   # optional, attached to outgoing mail
+   ```
+
+4. For Gmail, create an OAuth client and download its JSON:
+
+   1. Open the [Google Cloud Console](https://console.cloud.google.com/)
+      and create a new project if you don't already have one.
+   2. Go to `APIs & Services -> Credentials -> OAuth 2.0 Client IDs` and
+      start creating a new client.
+   3. Choose **Desktop app** as the application type, give it any name,
+      and click Create.
+   4. Click **Download JSON** and save it at `data/gmail/client_secret.json`
+      (the expected shape is shown in `data/gmail/client_secret.example.json`).
+
+   The first run that sends mail will open a browser for consent and
+   produce `data/gmail/token.json`.
+
+5. Initialise the database:
+
+   ```
+   make init-db
+   ```
+
 ## How it works
 
 ```
@@ -57,63 +136,6 @@ MailRocketAI/
 └── scripts/
     └── db_admin.py              # one-off DB ops
 ```
-
-## Setup
-
-This project uses [uv](https://docs.astral.sh/uv/) for environment and
-dependency management. If you don't have it yet:
-
-```
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-1. Install dependencies (creates `.venv/` and pins from `uv.lock`):
-
-   ```
-   make sync          # or: uv sync
-   ```
-
-   uv will read `.python-version` and provision the matching interpreter
-   automatically if needed.
-
-2. Create your config files from the templates:
-
-   ```
-   cp config/config.example.yaml   config/config.yaml
-   cp config/secrets.example.yaml  config/secrets.yaml
-   ```
-
-   Edit both. `config.yaml` holds plain text (URLs, phone, email defaults,
-   filter thresholds, model list). `secrets.yaml` holds your LinkedIn
-   credentials, Gemini/Groq API keys, and Gmail OAuth file paths. Both
-   files are gitignored.
-
-3. Drop your resume in `data/`:
-
-   ```
-   cp data/resume.example.txt data/resume.txt   # then edit
-   cp /path/to/your-cv.pdf    data/resume.pdf   # optional, attached to outgoing mail
-   ```
-
-4. For Gmail, create an OAuth client and download its JSON:
-
-   1. Open the [Google Cloud Console](https://console.cloud.google.com/)
-      and create a new project if you don't already have one.
-   2. Go to `APIs & Services -> Credentials -> OAuth 2.0 Client IDs` and
-      start creating a new client.
-   3. Choose **Desktop app** as the application type, give it any name,
-      and click Create.
-   4. Click **Download JSON** and save it at `data/gmail/client_secret.json`
-      (the expected shape is shown in `data/gmail/client_secret.example.json`).
-
-   The first run that sends mail will open a browser for consent and
-   produce `data/gmail/token.json`.
-
-5. Initialise the database:
-
-   ```
-   make init-db
-   ```
 
 ## Daily flow
 
