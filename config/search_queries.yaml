@@ -21,7 +21,6 @@ searches:
       includes:
         keywords: ["Backend hiring"]
     locations:
-      - "Singapore"
       - "Warsaw"
       - "Dubai"
       - "Amsterdam"
@@ -29,6 +28,7 @@ searches:
       - "Tokyo"
       - "Sydney"
       - "London"
+      - "Singapore"
 
   - name: "Golang Hiring"
     enabled: true

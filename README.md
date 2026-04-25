@@ -32,7 +32,9 @@ The CLI exposes them separately so you can:
 MailRocketAI/
 ├── Makefile
 ├── README.md
-├── requirements.txt
+├── pyproject.toml
+├── uv.lock
+├── .python-version
 ├── config/
 │   ├── config.example.yaml      # committed defaults & plain-text inputs
 │   ├── secrets.example.yaml     # committed template for keys/passwords
@@ -58,11 +60,21 @@ MailRocketAI/
 
 ## Setup
 
-1. Install dependencies:
+This project uses [uv](https://docs.astral.sh/uv/) for environment and
+dependency management. If you don't have it yet:
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+1. Install dependencies (creates `.venv/` and pins from `uv.lock`):
 
    ```
-   make install
+   make sync          # or: uv sync
    ```
+
+   uv will read `.python-version` and provision the matching interpreter
+   automatically if needed.
 
 2. Create your config files from the templates:
 
@@ -133,17 +145,32 @@ analysis.
 
 ## CLI subcommands
 
+The `mailrocket` console script is installed by `uv sync`, so prefix any
+of these with `uv run`:
+
 ```
-python -m mailrocket init-db         # create schema
-python -m mailrocket scrape          # only scrape
-python -m mailrocket analyze         # only analyze pending posts
-python -m mailrocket send [--dry-run]
-python -m mailrocket pipeline        # scrape + analyze
-python -m mailrocket run-all         # scrape + analyze + send
-python -m mailrocket ui              # web review UI
+uv run mailrocket init-db            # create schema
+uv run mailrocket scrape             # only scrape
+uv run mailrocket analyze            # only analyze pending posts
+uv run mailrocket send [--dry-run]
+uv run mailrocket pipeline           # scrape + analyze
+uv run mailrocket run-all            # scrape + analyze + send
+uv run mailrocket ui                 # web review UI
 ```
 
+`uv run python -m mailrocket <cmd>` still works if you prefer that form.
+
 Common flag: `--log-level DEBUG`.
+
+## Managing dependencies
+
+```
+uv add <pkg>                         # add a new runtime dependency
+uv add --group dev <pkg>             # add a dev-only dependency
+uv remove <pkg>                      # drop a dependency
+uv lock                              # re-resolve uv.lock
+uv sync                              # apply uv.lock to .venv
+```
 
 ## Configuration overrides
 
@@ -156,9 +183,9 @@ Secrets use `MAILROCKET_SECRET_<KEY>`.
 One-off operations live in `scripts/db_admin.py`:
 
 ```
-python scripts/db_admin.py raw "SELECT count(*) FROM linkedin_posts;"
-python scripts/db_admin.py count-by-date
-python scripts/db_admin.py mark-sent --from urls.txt
-python scripts/db_admin.py remove --no-backup
-python scripts/db_admin.py migrate
+uv run python scripts/db_admin.py raw "SELECT count(*) FROM linkedin_posts;"
+uv run python scripts/db_admin.py count-by-date
+uv run python scripts/db_admin.py mark-sent --from urls.txt
+uv run python scripts/db_admin.py remove --no-backup
+uv run python scripts/db_admin.py migrate
 ```

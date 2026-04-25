@@ -1,0 +1,69 @@
+[project]
+name = "mailrocket"
+version = "0.2.0"
+description = "LinkedIn job-post -> resume-tailored email pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Hrushikesh Patil" }]
+keywords = ["linkedin", "gmail", "llm", "automation", "job-search"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Operating System :: OS Independent",
+    "Private :: Do Not Upload",
+]
+dependencies = [
+    "beautifulsoup4==4.10.0",
+    "fastapi==0.121.3",
+    "google-api-python-client==2.176.0",
+    "google-auth==2.40.3",
+    "google-auth-httplib2==0.2.0",
+    "google-auth-oauthlib==1.2.2",
+    "jinja2>=3.1",
+    "langchain-core==0.3.84",
+    "langchain-google-genai==2.1.6",
+    "langchain-groq==0.3.5",
+    "langchain-mistralai==0.2.12",
+    "langchain-openai==0.3.35",
+    "pydantic==2.11.7",
+    "python-multipart==0.0.20",
+    "pyyaml==6.0.2",
+    "selenium==4.34.2",
+    "selenium-stealth==1.0.6",
+    "undetected-chromedriver==3.5.5",
+    "uvicorn==0.38.0",
+]
+
+[project.scripts]
+mailrocket = "mailrocket.cli:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mailrocket"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "mailrocket",
+    "scripts",
+    "prompts",
+    "config/*.example.yaml",
+    "config/search_queries.yaml",
+    "README.md",
+    "Makefile",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]

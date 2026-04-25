@@ -4,6 +4,12 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+build/
+dist/
+
+# uv
+# uv.lock IS committed; ignore the cache and any local installer artifacts only.
+.uv-cache/
 
 # Local IDE / OS
 .DS_Store
