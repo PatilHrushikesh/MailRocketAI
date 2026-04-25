@@ -1,0 +1,69 @@
+<YOU CAN COPY PASTE YOUR RESUME HERE, DONT MIND THE FORMATTING OF TEXT ITS NOT IMPORTANT>
+Jane Doe
+Software Engineer
+Phone: +1-415-555-0142
+Email: jane.doe@example.com
+LinkedIn: https://www.linkedin.com/in/janedoe
+GitHub:   https://github.com/janedoe
+Location: Singapore (open to remote / relocation)
+
+
+SUMMARY
+Backend engineer with 4 years of experience building distributed systems
+in Python and Go. Comfortable owning a service end-to-end: API design,
+data modelling, deployment, and on-call. Strongest in high-throughput
+event pipelines and database performance work.
+
+
+SKILLS
+Languages:    Python, Go, SQL, Bash, TypeScript
+Backend:      FastAPI, gRPC, Flask, Gin, Celery, RabbitMQ, Kafka
+Data:         PostgreSQL, MySQL, Redis, ClickHouse, Elasticsearch
+Cloud / Ops:  AWS (EC2, RDS, S3, Lambda, SQS), GCP, Docker, Kubernetes,
+              Terraform, GitHub Actions
+Other:        REST, OAuth2, OpenTelemetry, Prometheus, Grafana
+
+
+EXPERIENCE
+
+Senior Backend Engineer  -  Acme Corp                       Jul 2023 – Present
+-  Led migration of the billing service from a monolith to 4 gRPC
+   microservices on Kubernetes; cut p95 latency from 800ms to 120ms.
+-  Built an event-replay tool used by support to reproduce customer
+   issues from Kafka in under 30 seconds.
+-  Mentored two junior engineers; ran the on-call rotation for 6
+   services across 3 teams.
+
+Software Engineer  -  Beta Logistics                        Aug 2021 – Jun 2023
+-  Designed the route-optimisation service in Go; processed ~2M jobs/day
+   with sub-second response time.
+-  Owned the data-pipeline reliability work: added idempotency,
+   retries, and dead-letter queues to 12 ETL jobs.
+-  Cut AWS spend ~22% by rightsizing RDS and moving cold S3 data to
+   Glacier.
+
+Junior Backend Engineer  -  Gamma Analytics                 Jul 2020 – Jul 2021
+-  Built a CSV-to-Parquet ingestion pipeline used by the analytics
+   team; reduced query latency on the warehouse by 4x.
+-  Wrote the company's first end-to-end test harness for FastAPI.
+
+
+PROJECTS
+
+OpenLog  (https://github.com/janedoe/openlog)
+-  Self-hostable structured-log aggregator written in Go, ~3k stars.
+-  Sub-100MB Docker image; ships with a pluggable storage backend.
+
+WhatTheGist  (https://whatthegist.dev)
+-  Side-project that summarises long Slack threads using local LLMs.
+-  Used by ~200 weekly active users.
+
+
+EDUCATION
+B.E. Computer Science, Example Institute of Technology     2016 – 2020
+GPA: 8.6/10  -  Coursework: OS, Distributed Systems, Databases, ML.
+
+
+CERTIFICATIONS
+-  AWS Certified Solutions Architect - Associate (2024)
+-  CKA: Certified Kubernetes Administrator (2023)

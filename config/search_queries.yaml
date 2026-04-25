@@ -1,0 +1,48 @@
+version: 1.1
+
+searches:
+  - name: "Python Hiring No Location"
+    enabled: false
+    sort_by_latest_option: 2
+    description: "Find non-senior technical leads in SaaS/Cloud companies"
+    max_results: 30
+    parameters:
+      includes:
+        keywords: ["Backend hiring"]
+      excludes:
+        keywords: ['Google']
+
+  - name: "Python hiring"
+    enabled: true
+    description: "Find non-senior technical leads in SaaS/Cloud companies"
+    max_results: 30
+    sort_by_latest_option: 2
+    parameters:
+      includes:
+        keywords: ["Backend hiring"]
+    locations:
+      - "Singapore"
+      - "Warsaw"
+      - "Dubai"
+      - "Amsterdam"
+      - "Seoul"
+      - "Tokyo"
+      - "Sydney"
+      - "London"
+
+  - name: "Golang Hiring"
+    enabled: true
+    description: "Golang hiring"
+    max_results: 30
+    parameters:
+      includes:
+        keywords: ["Golang Hiring"]
+    locations:
+      - "Warsaw"
+      - "Dubai"
+      - "Singapore"
+      - "Amsterdam"
+      - "Seoul"
+      - "Tokyo"
+      - "Sydney"
+      - "London"

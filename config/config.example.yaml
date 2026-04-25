@@ -1,0 +1,130 @@
+
+# MailRocket configuration (non-secret).
+#
+# Copy this file to config/config.yaml and edit. The actual config.yaml is
+# gitignored. Anything in here can also be overridden by an environment
+# variable named MAILROCKET_<UPPER_SNAKE_KEY>, e.g. MAILROCKET_HEADLESS=0.
+
+paths:
+  # All paths are resolved relative to the repo root unless absolute.
+  db: data/linkedin_posts.db
+  cookies: data/cookies.pkl
+  queries: config/search_queries.yaml
+  prompts_dir: prompts
+  resume_text: data/resume.txt        # plain-text resume the LLM reads
+  resume_pdf: data/resume.pdf         # optional PDF attached to outgoing mail
+  chrome_profile: data/chrome-profile # persistent Chrome user-data dir; once you
+                                      # log into LinkedIn here, the session sticks
+                                      # forever. Wipe the dir to force a re-login.
+  debug_dir: data/debug               # HTML + screenshot dumps on login failures
+
+# Personal info woven into the email signature/subject.
+candidate:
+  full_name: "Your Name"
+  phone_number: ""
+  resume_url: ""                      # public link, e.g. Drive/Dropbox
+  linkedin_profile_url: ""
+
+# Email defaults.
+email:
+  from_mail: ""                       # Gmail address you authenticated
+  self_review_mail: ""                # copy of every sent mail goes here
+  subject_postfix: " | 3 YoE | Python, Golang"
+  body_closer: |
+
+    Here's my resume: {resume_url}
+    LinkedIn: {linkedin_profile_url}
+
+    Thanks,
+    {full_name}
+    {phone_number}
+
+# Decision rules used by the mailer to decide whether a draft is sendable.
+filters:
+  match_threshold: 68                 # send only if match_percentage > this
+  max_experience_gap: 1               # reject if gap >= this many years
+  reject_employment_types:
+    - internship
+
+# Browser / scraper behavior.
+scraper:
+  headless: true
+  max_post_age_weeks: 10
+  per_query_delay_seconds: 5            # Bump higher if LinkedIn starts blocking
+  manual_login_timeout_seconds: 300     # If auto-login form-fill fails AND
+                                        # headless=false, wait this long for you
+                                        # to sign in by hand.
+  dump_after_login: false               # If true, save the feed page HTML +
+                                        # screenshot to paths.debug_dir right
+                                        # after login. Useful for debugging the
+                                        # post-login DOM. Override per-run with
+                                        # `MAILROCKET_DUMP_AFTER_LOGIN=1`.
+
+# Logging
+logging:
+  level: INFO                         # DEBUG, INFO, WARNING, ERROR
+  file: data/mailrocket.log           # set to null to disable file logging
+
+# LLM model rotation (first available is tried first; on failure cycles to
+# next). Provider must be one of:
+#   groq, google, openrouter, cerebras, mistral, github
+llm:
+  models:
+    # ==== Highest quality first (lowest free-tier RPDs) ====
+    - {provider: google,     name: gemini-2.5-pro}
+    - {provider: groq,       name: openai/gpt-oss-120b}
+    - {provider: groq,       name: llama-3.3-70b-versatile}
+
+    # ==== Balanced quality + throughput ====
+    - {provider: google,     name: gemini-2.5-flash}
+    - {provider: groq,       name: qwen/qwen3-32b}                        # preview, may rotate
+    - {provider: groq,       name: meta-llama/llama-4-scout-17b-16e-instruct}  # preview
+
+    # ==== High-throughput tail ====
+    - {provider: google,     name: gemini-2.5-flash-lite}
+    - {provider: groq,       name: openai/gpt-oss-20b}
+    - {provider: groq,       name: llama-3.1-8b-instant}
+
+    # ==== Cerebras (set cerebras_api_key in secrets.yaml). 14.4K req/day. ====
+    # NOTE: free tier currently restricts gpt-oss-120b and zai-glm-4.7 — only
+    # qwen-3-235b and llama3.1-8b are reliably available right now.
+    - {provider: cerebras,   name: qwen-3-235b-a22b-instruct-2507}        # huge MoE, very fast
+    - {provider: cerebras,   name: llama3.1-8b}
+
+    # ==== Mistral La Plateforme (set mistral_api_key). ~1B tokens/month, 1 RPS. ====
+    - {provider: mistral,    name: mistral-large-latest}
+    - {provider: mistral,    name: mistral-small-latest}
+    # - {provider: mistral,  name: open-mistral-nemo}                     # smaller open-weight
+
+    # ==== GitHub Models (set github_token w/ models:read). 50–150 RPD per model. ====
+    # IDs are publisher-prefixed: GET https://models.inference.ai.azure.com/catalog/models
+    - {provider: github,     name: openai/gpt-4o}
+    - {provider: github,     name: openai/gpt-4o-mini}
+    - {provider: github,     name: openai/o3-mini}
+    # - {provider: github,   name: meta/Meta-Llama-3.1-70B-Instruct}
+    # - {provider: github,   name: mistral-ai/Mistral-Large-2411}
+    # - {provider: github,   name: microsoft/Phi-4}
+
+    # ==== OpenRouter free-tier fallbacks (set openrouter_api_key). ====
+    # Free models are rate-limited ~20 RPM / 200 RPD per model AND share
+    # upstream provider pools, so individual models often 429. The rotation
+    # handles that — list a diverse set so at least one is hot.
+    - {provider: openrouter, name: "google/gemma-3-27b-it:free"}
+    - {provider: openrouter, name: "minimax/minimax-m2.5:free"}
+    - {provider: openrouter, name: "inclusionai/ling-2.6-flash:free"}
+    - {provider: openrouter, name: "openai/gpt-oss-120b:free"}
+    - {provider: openrouter, name: "openai/gpt-oss-20b:free"}
+    - {provider: openrouter, name: "nvidia/nemotron-3-super-120b-a12b:free"}  # 120B but slow (~13s)
+    # Often 429-throttled on free pools but worth retrying — uncomment if needed:
+    # - {provider: openrouter, name: "meta-llama/llama-3.3-70b-instruct:free"}
+    # - {provider: openrouter, name: "qwen/qwen3-next-80b-a3b-instruct:free"}
+    # - {provider: openrouter, name: "z-ai/glm-4.5-air:free"}
+    # - {provider: openrouter, name: "nousresearch/hermes-3-llama-3.1-405b:free"}
+    # - {provider: openrouter, name: "qwen/qwen3-coder:free"}
+
+  groq_temperature: 0.4
+  google_temperature: 0.7
+  openrouter_temperature: 0.4
+  cerebras_temperature: 0.4
+  mistral_temperature: 0.4
+  github_temperature: 0.4
