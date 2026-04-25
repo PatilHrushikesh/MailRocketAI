@@ -95,11 +95,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
    cp /path/to/your-cv.pdf    data/resume.pdf   # optional, attached to outgoing mail
    ```
 
-4. For Gmail: download an OAuth client JSON from Google Cloud Console
-   (`APIs & Services -> Credentials -> OAuth 2.0 Client IDs -> Download JSON`)
-   and save it at `data/gmail/client_secret.json`. The shape is shown in
-   `data/gmail/client_secret.example.json`. The first run that sends mail
-   will open a browser for consent and produce `data/gmail/token.json`.
+4. For Gmail, create an OAuth client and download its JSON:
+
+   1. Open the [Google Cloud Console](https://console.cloud.google.com/)
+      and create a new project if you don't already have one.
+   2. Go to `APIs & Services -> Credentials -> OAuth 2.0 Client IDs` and
+      start creating a new client.
+   3. Choose **Desktop app** as the application type, give it any name,
+      and click Create.
+   4. Click **Download JSON** and save it at `data/gmail/client_secret.json`
+      (the expected shape is shown in `data/gmail/client_secret.example.json`).
+
+   The first run that sends mail will open a browser for consent and
+   produce `data/gmail/token.json`.
 
 5. Initialise the database:
 
