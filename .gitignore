@@ -12,3 +12,4 @@ app/tasks/email_sender_lib/client_secret.json
 app/tasks/email_sender_lib/token.json
 app/tasks/resume_analyser/messege_content.txt
 app/tasks/resume_analyser/resume.txt
+cookies.pkl
