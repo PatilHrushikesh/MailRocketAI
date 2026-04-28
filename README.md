@@ -54,6 +54,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
    | `openrouter_api_key`             | [OpenRouter](https://openrouter.ai/keys)                                              | optional, mixed free models            |
    | `github_token`                   | [GitHub PAT](https://github.com/settings/tokens) with `models:read` scope             | optional, unlocks gpt-4o / o3-mini     |
    | `gmail.client_secret_path`       | Google Cloud Console — see step 4 below for the full flow                             | required for `send`                    |
+   | `langfuse.public_key` / `secret_key` | [Langfuse Cloud](https://cloud.langfuse.com) (free tier) or self-host             | optional, enables LLM tracing          |
 
    Any of these can also be supplied via an env var named
    `MAILROCKET_SECRET_<UPPER_KEY>` (e.g.
@@ -86,6 +87,30 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
    make init-db
    ```
+
+6. *(Optional but recommended)* Enable LLM observability with Langfuse:
+
+   The analyzer talks to ~6 LLM providers via [LiteLLM](https://docs.litellm.ai).
+   When Langfuse keys are present, every model call is traced — prompt,
+   response, latency, token cost, model used, and the post link it was
+   about — and grouped per pipeline run. When the keys are absent the
+   analyzer just runs without tracing.
+
+   1. Sign up at [cloud.langfuse.com](https://cloud.langfuse.com) (free
+      tier) or self-host. Create a project; copy its public + secret keys.
+   2. Add them to `config/secrets.yaml`:
+
+      ```yaml
+      langfuse:
+        public_key: "pk-lf-..."
+        secret_key: "sk-lf-..."
+        host: "https://cloud.langfuse.com"
+      ```
+
+   3. Run `make pipeline` and check the Langfuse dashboard — every
+      analysed post becomes one trace, every model attempt one
+      generation, tagged by provider so you can see at a glance which
+      models 429, which run slowly, and which actually deliver.
 
 ## Search queries
 

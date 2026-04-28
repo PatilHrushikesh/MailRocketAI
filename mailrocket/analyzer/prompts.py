@@ -1,14 +1,15 @@
-"""Build the langchain prompt used by the analyzer service."""
+"""Build the chat messages used by the analyzer service.
+
+This module used to depend on langchain's `ChatPromptTemplate`. Since
+LiteLLM accepts the OpenAI-shaped `messages=[{role, content}, ...]`
+list directly, we just produce that list with plain `str.format()` —
+no template engine needed.
+"""
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
-)
+from typing import Any
 
 from mailrocket.settings import settings
 
@@ -44,20 +45,33 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def build_prompt() -> tuple[ChatPromptTemplate, str]:
-    """Return (chat prompt template, full response template string).
+def _load_response_template() -> str:
+    """The schema-bearing part of the system prompt.
 
     Reads from `prompts/` on every call; cheap, and keeps things stateless.
+    Returns the concatenation of `resume_analysis.txt` + `output_schema.json`.
     """
     prompts_dir = settings.paths.prompts_dir
     response_template = _read_text(prompts_dir / "resume_analysis.txt")
     json_structure = _read_text(prompts_dir / "output_schema.json")
-    full_template = response_template + json_structure
+    return response_template + json_structure
 
-    system = SystemMessagePromptTemplate.from_template(SYSTEM_TEMPLATE)
-    human = HumanMessagePromptTemplate.from_template(USER_TEMPLATE)
-    chat = ChatPromptTemplate.from_messages([system, human])
-    return chat, full_template
+
+def build_messages(params: dict[str, Any]) -> tuple[list[dict[str, str]], str]:
+    """Return (messages, full_response_template).
+
+    `messages` is a chat-completions-shaped list ready to pass to LiteLLM.
+    `full_response_template` is exposed separately because the service layer
+    historically returned it for debugging; preserved for compatibility.
+    """
+    full_template = _load_response_template()
+    fill = {**params, "response_template": full_template}
+
+    messages = [
+        {"role": "system", "content": SYSTEM_TEMPLATE.format(**fill)},
+        {"role": "user", "content": USER_TEMPLATE.format(**fill)},
+    ]
+    return messages, full_template
 
 
 def load_resume_text() -> str:

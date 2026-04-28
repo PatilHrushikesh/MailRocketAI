@@ -22,9 +22,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from langchain_core.messages import HumanMessage  # noqa: E402
-
-from mailrocket.analyzer.llm import get_llm  # noqa: E402
+from mailrocket.analyzer.llm import _api_key_for, complete_json  # noqa: E402
 from mailrocket.settings import settings  # noqa: E402
 
 PROMPT = "Reply with the single word: OK"
@@ -48,17 +46,6 @@ def _short(text: str, n: int = 80) -> str:
 PROVIDERS = ("groq", "google", "openrouter", "cerebras", "mistral", "github")
 
 
-def _api_key_for(provider: str) -> str:
-    return {
-        "groq": settings.secrets.groq_api_key,
-        "google": settings.secrets.gemini_api_key,
-        "openrouter": settings.secrets.openrouter_api_key,
-        "cerebras": settings.secrets.cerebras_api_key,
-        "mistral": settings.secrets.mistral_api_key,
-        "github": settings.secrets.github_token,
-    }.get(provider, "")
-
-
 def _ping(model_info: dict, max_tokens: int, timeout: float) -> Result:
     provider = model_info["provider"]
     name = model_info["name"]
@@ -68,20 +55,17 @@ def _ping(model_info: dict, max_tokens: int, timeout: float) -> Result:
 
     start = time.perf_counter()
     try:
-        llm = get_llm(model_info)
-        # Bind only `max_tokens` — some clients (notably langchain-mistralai)
-        # leak `timeout` into the request body and trigger a 422.
-        try:
-            llm = llm.bind(max_tokens=max_tokens)
-        except Exception:
-            pass
-
-        msg = llm.invoke([HumanMessage(content=PROMPT)], config={"timeout": timeout})
+        # Plain user message; we don't need the JSON-shaped analyzer prompt here.
+        messages = [{"role": "user", "content": PROMPT}]
+        _parsed, raw = complete_json(
+            model_info,
+            messages,
+            metadata={"generation_name": "health_check", "tags": ["mailrocket", "health"]},
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
         elapsed = int((time.perf_counter() - start) * 1000)
-        reply = getattr(msg, "content", str(msg))
-        if isinstance(reply, list):
-            reply = " ".join(str(p) for p in reply)
-        return Result(provider, name, True, elapsed, _short(reply, 60), "")
+        return Result(provider, name, True, elapsed, _short(raw, 60), "")
     except Exception as e:
         elapsed = int((time.perf_counter() - start) * 1000)
         return Result(provider, name, False, elapsed, "", _short(str(e), 140))

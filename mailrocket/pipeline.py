@@ -73,7 +73,14 @@ def run_analyze() -> int:
                 mark_analyzed(post["uid"])
                 continue
 
-            results, model_info = analyze_job_match(jobs_text)
+            results, model_info = analyze_job_match(
+                jobs_text,
+                trace_metadata={
+                    "post_uid": post["uid"],
+                    "post_link": post.get("post_link"),
+                    "query": post.get("query"),
+                },
+            )
             insert_analysis(post["uid"], results, model_used=model_info.get("name"))
             analyzed += 1
         except Exception:
