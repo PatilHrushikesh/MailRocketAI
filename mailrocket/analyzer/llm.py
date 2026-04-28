@@ -27,11 +27,39 @@ import threading
 from collections.abc import Iterable, Iterator
 from typing import Any
 
+import jsonschema
 import litellm
 
 from mailrocket.settings import settings
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Output schema validation
+# ---------------------------------------------------------------------------
+
+_SCHEMA: dict | None = None
+
+
+def _load_output_schema() -> dict | None:
+    """Load the JSON Schema from prompts/v1/output_schema.json for validation."""
+    global _SCHEMA
+    if _SCHEMA is not None:
+        return _SCHEMA
+    schema_path = settings.paths.prompts_dir / "v1" / "output_schema.json"
+    if not schema_path.exists():
+        logger.debug("No v1 output_schema.json found; schema validation disabled")
+        return None
+    try:
+        _SCHEMA = json.loads(schema_path.read_text(encoding="utf-8"))
+        return _SCHEMA
+    except Exception:
+        logger.warning("Failed to load output schema; validation disabled", exc_info=True)
+        return None
+
+
+class SchemaValidationError(RuntimeError):
+    """Raised when the LLM response doesn't conform to the output schema."""
 
 
 # ---------------------------------------------------------------------------
@@ -191,6 +219,23 @@ def model_cycle() -> Iterator[dict]:
 # ---------------------------------------------------------------------------
 
 
+def validate_response(parsed: Any) -> None:
+    """Validate parsed JSON against the v1 output schema.
+
+    Raises ``SchemaValidationError`` if validation fails, which the caller
+    treats as a model failure and rotates to the next model.
+    """
+    schema = _load_output_schema()
+    if schema is None:
+        return
+    try:
+        jsonschema.validate(instance=parsed, schema=schema)
+    except jsonschema.ValidationError as exc:
+        raise SchemaValidationError(
+            f"Response failed schema validation: {exc.message}"
+        ) from exc
+
+
 def complete_json(
     model_info: dict,
     messages: list[dict],
@@ -198,14 +243,23 @@ def complete_json(
     metadata: dict[str, Any] | None = None,
     max_tokens: int | None = None,
     timeout: float | None = None,
+    json_mode: bool = True,
 ) -> tuple[Any, str]:
     """Send one chat completion and return (parsed_json, raw_text).
 
     Raises on transport / API errors so the caller can rotate to the next
     model. JSON parse failures *do not* raise — they return (None, raw_text).
+    Schema validation failures raise ``SchemaValidationError``.
 
-    `metadata` is forwarded to LiteLLM, where Langfuse picks up keys like
-    `trace_id`, `session_id`, `tags`, `generation_name`, `trace_user_id`.
+    When *json_mode* is True (the default), ``response_format`` is set to
+    ``{"type": "json_object"}`` which most OpenAI-compatible providers
+    respect. LiteLLM's ``drop_params=True`` silently ignores it for
+    providers that don't support it, so the textual schema in the system
+    message acts as a fallback.
+
+    ``metadata`` is forwarded to LiteLLM, where Langfuse picks up keys like
+    ``trace_id``, ``session_id``, ``tags``, ``generation_name``,
+    ``trace_user_id``.
     """
     _init_litellm()
 
@@ -225,6 +279,8 @@ def complete_json(
         "temperature": temperature,
         "num_retries": 2,
     }
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
     if timeout is not None:
@@ -241,6 +297,10 @@ def complete_json(
         raise RuntimeError(f"Unexpected LiteLLM response shape: {e!r}") from e
 
     parsed = parse_json_response(text)
+
+    if parsed is not None:
+        validate_response(parsed)
+
     return parsed, text
 
 
@@ -254,9 +314,11 @@ def get_llm(model_info: dict) -> dict:  # pragma: no cover - compat only
 
 
 __all__ = [
+    "SchemaValidationError",
     "complete_json",
     "model_cycle",
     "parse_json_response",
+    "validate_response",
     "get_llm",
 ]
 

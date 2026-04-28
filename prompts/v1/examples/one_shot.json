@@ -1,0 +1,37 @@
+{
+  "_comment": "One-shot example appended to system prompt when llm.few_shot=true. Edit to match your resume/domain.",
+  "input_snippet": "We are looking for a Senior Backend Engineer with 3+ years experience in Go, Kubernetes, and PostgreSQL. Remote-friendly. Apply at careers@acme.dev or https://acme.dev/apply. Acme Corp, San Francisco.",
+  "output": [
+    {
+      "match_percentage": 82,
+      "required_experience": 3,
+      "experience_gap": 0,
+      "missing_skills": [],
+      "contact_email": ["careers@acme.dev"],
+      "contact_number": [],
+      "application_link": ["https://acme.dev/apply"],
+      "title": "Senior Backend Engineer",
+      "company_name": "Acme",
+      "location": "San Francisco, Remote",
+      "salary": null,
+      "should_apply": true,
+      "message_content": {
+        "subject": "Application for Senior Backend Engineer at Acme",
+        "body": "Hi Team,\n\nI'm a backend engineer with 3+ years building Go microservices on Kubernetes. My strongest overlap with your requirements is in Go concurrency patterns and Postgres query optimization.\n\nAt my current role I migrated a monolith to 12 Go services on K8s, cutting deploy times by 60% and reducing p95 latency from 320ms to 45ms.\n\nI'd like to bring that same infrastructure-first mindset to Acme's backend team."
+      },
+      "additional_data": {
+        "employment_type": "Full-time",
+        "application_deadline": null,
+        "education_requirements": null,
+        "certifications": [],
+        "security_clearance": null,
+        "visa_sponsorship": null,
+        "benefits": [],
+        "remote_eligibility": true,
+        "travel_requirements": null,
+        "skip_reason": null,
+        "other": {}
+      }
+    }
+  ]
+}

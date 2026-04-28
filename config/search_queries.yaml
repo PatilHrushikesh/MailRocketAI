@@ -21,13 +21,13 @@ searches:
       includes:
         keywords: ["Backend hiring"]
     locations:
-      - "Warsaw"
-      - "Dubai"
       - "Amsterdam"
-      - "Seoul"
       - "Tokyo"
-      - "Sydney"
+      - "Seoul"
+      - "Warsaw"
       - "London"
+      - "Dubai"
+      - "Sydney"
       - "Singapore"
 
   - name: "Golang Hiring"

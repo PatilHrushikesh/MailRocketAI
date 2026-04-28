@@ -25,7 +25,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from mailrocket.analyzer.llm import _api_key_for, complete_json  # noqa: E402
 from mailrocket.settings import settings  # noqa: E402
 
-PROMPT = "Reply with the single word: OK"
+PROMPT = 'Respond with this exact JSON, no prose, no markdown: {"ok": true}'
 
 
 @dataclass

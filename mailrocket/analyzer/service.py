@@ -18,12 +18,7 @@ import uuid
 from typing import Any
 
 from mailrocket.analyzer.llm import complete_json, model_cycle
-from mailrocket.analyzer.prompts import (
-    build_messages,
-    load_email_tailoring_instructions,
-    load_message_content,
-    load_resume_text,
-)
+from mailrocket.analyzer.prompts import build_messages, load_resume_text
 from mailrocket.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -76,6 +71,7 @@ def _build_trace_metadata(
         or (f"post-{extra.get('post_uid')}" if extra.get("post_uid") else None)
         or f"adhoc-{uuid.uuid4().hex[:8]}"
     )
+    prompt_version = extra.get("prompt_version", "unknown")
     return {
         "generation_name": f"analyze_job_match[attempt={attempt}]",
         "trace_id": trace_id,
@@ -85,11 +81,12 @@ def _build_trace_metadata(
             "stage:analyze",
             f"provider:{model_info['provider']}",
             f"model:{model_info['name']}",
+            f"prompt:{prompt_version}",
         ],
-        # Free-form fields below — Langfuse stores them on the trace:
         "post_uid": extra.get("post_uid"),
         "post_link": extra.get("post_link"),
         "query": extra.get("query"),
+        "prompt_version": prompt_version,
     }
 
 
@@ -153,12 +150,12 @@ def analyze_job_match(
     params = {
         "resume": load_resume_text(),
         "jobs": jobs_text,
-        "messege_content": load_message_content(),
-        "messege_content_tailoring_instructions": load_email_tailoring_instructions(),
-        "resume_url": settings.candidate.resume_url,
-        "linkedin_profile_url": settings.candidate.linkedin_profile_url,
     }
-    messages, _full_template = build_messages(params)
+    messages, prompt_version = build_messages(params)
+
+    if trace_metadata is None:
+        trace_metadata = {}
+    trace_metadata["prompt_version"] = prompt_version
 
     result, model_info = _invoke(messages, trace_metadata=trace_metadata)
     logger.info("Analysis complete using %s/%s", model_info["provider"], model_info["name"])

@@ -201,10 +201,16 @@ MailRocketAI/
 │   ├── config.example.yaml      # committed defaults & plain-text inputs
 │   ├── secrets.example.yaml     # committed template for keys/passwords
 │   └── search_queries.yaml      # the search definitions
-├── prompts/                     # LLM prompts
-│   ├── resume_analysis.txt
-│   ├── email_tailoring.txt
-│   └── output_schema.json
+├── prompts/                     # LLM prompts (v1 framework)
+│   ├── resume_analysis.txt      # legacy (kept for fallback)
+│   ├── email_tailoring.txt      # legacy (kept for fallback)
+│   ├── output_schema.json       # legacy (kept for fallback)
+│   └── v1/
+│       ├── analysis.md          # scoring + extraction instructions
+│       ├── drafting.md          # email-drafting instructions
+│       ├── output_schema.json   # JSON Schema (Draft 2020-12)
+│       └── examples/
+│           └── one_shot.json    # optional few-shot example
 ├── data/                        # gitignored runtime state
 │   ├── linkedin_posts.db
 │   ├── cookies.pkl
@@ -215,9 +221,16 @@ MailRocketAI/
 │   ├── pipeline.py
 │   ├── settings.py
 │   ├── logging_setup.py
-│   ├── scraper/  analyzer/  mailer/  storage/
+│   ├── analyzer/
+│   │   ├── prompts.py           # prompt assembly + version tagging
+│   │   ├── prompt_render.py     # safe {{var}} interpolation
+│   │   ├── llm.py               # LiteLLM client + schema validation
+│   │   └── service.py           # orchestration + model rotation
+│   ├── scraper/  mailer/  storage/
 └── scripts/
-    └── db_admin.py              # one-off DB ops
+    ├── db_admin.py              # one-off DB ops
+    ├── test_models.py           # health-check all configured models
+    └── eval_prompts.py          # prompt evaluation harness
 ```
 
 ## Daily flow
@@ -302,3 +315,85 @@ uv run python scripts/db_admin.py mark-sent --from urls.txt
 uv run python scripts/db_admin.py remove --no-backup
 uv run python scripts/db_admin.py migrate
 ```
+
+## Prompt framework
+
+The LLM prompts live in `prompts/v1/` and follow a versioned, structured
+convention. The legacy flat files in `prompts/` are kept as a fallback
+(the loader uses them automatically if `prompts/v1/` is absent).
+
+### Structure
+
+| File | Purpose |
+| ---- | ------- |
+| `v1/analysis.md` | Scoring rubric, extraction rules, `should_apply` logic |
+| `v1/drafting.md` | Email subject/body generation instructions |
+| `v1/output_schema.json` | JSON Schema (Draft 2020-12) — used for both in-prompt guidance and post-parse validation |
+| `v1/examples/one_shot.json` | Optional one-shot example (enabled with `llm.few_shot: true`) |
+
+### Versioning
+
+Each prompt file carries a version header: `<!-- version: 1.0.0 -->`. The
+version is extracted at load time and forwarded to Langfuse as both a tag
+(`prompt:1.0.0`) and a free-form metadata field (`prompt_version`). This
+makes every trace filterable by prompt revision.
+
+To ship a new prompt version, create `prompts/v2/` with the same file
+names. Update the loader path in `mailrocket/analyzer/prompts.py` (a
+one-line change). The old version stays around for A/B comparison.
+
+### Safe interpolation
+
+Prompts use `{{variable}}` placeholders (double-brace) instead of Python's
+`str.format()`. The renderer (`mailrocket/analyzer/prompt_render.py`) uses
+a regex substitution that is immune to stray `{` or `}` characters in
+resumes, job posts, or any user-supplied content. Unknown placeholders are
+left as-is and logged as warnings.
+
+### Structured output
+
+The analyzer requests `response_format={"type": "json_object"}` on every
+LLM call. LiteLLM's `drop_params=True` silently ignores this for providers
+that don't support it, so the textual schema in the system message acts as
+a fallback. Every response is validated against `v1/output_schema.json`
+using `jsonschema`. Validation failures trigger model rotation.
+
+### Injection hardening
+
+User-supplied text (resume, job posts) is wrapped in XML-style data blocks
+(`<RESUME>`, `<JOB_POSTINGS>`, `<CANDIDATE>`) in the user message. The
+system message explicitly instructs the model to treat these as data. Any
+occurrences of the closing tags inside user content are stripped before
+rendering to prevent breakout.
+
+### Candidate-specific config
+
+Role preferences and per-role-type emphasis rules (previously hard-coded
+in the prompt files) now live in `config/config.yaml` under `candidate.*`:
+
+```yaml
+candidate:
+  preferred_roles: ["Python Developer", "Golang Developer"]
+  role_specific_emphasis:
+    - role_type: "Backend"
+      emphasis: "Emphasize Go/Kubernetes/Postgres achievements."
+```
+
+### Threshold parity
+
+The prompt interpolates `match_threshold`, `max_experience_gap`, and
+`reject_employment_types` from `config.yaml -> filters` so the LLM's
+`should_apply` output uses the exact same predicate as the downstream
+mailer decision logic in `mailrocket/mailer/decisions.py`.
+
+### Evaluating prompt changes
+
+Before merging a prompt change, run the evaluation harness:
+
+```
+uv run python scripts/eval_prompts.py --limit 20
+uv run python scripts/eval_prompts.py --limit 50 --csv results.csv
+```
+
+This re-runs the analyzer against posts whose analyses have been reviewed
+by a human (ground truth) and reports per-field accuracy metrics.

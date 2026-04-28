@@ -44,6 +44,8 @@ class Candidate:
     phone_number: str
     resume_url: str
     linkedin_profile_url: str
+    preferred_roles: tuple[str, ...]
+    role_specific_emphasis: tuple[dict, ...]
 
 
 @dataclass(frozen=True)
@@ -85,6 +87,7 @@ class LLMConfig:
     cerebras_temperature: float
     mistral_temperature: float
     github_temperature: float
+    few_shot: bool
 
 
 @dataclass(frozen=True)
@@ -192,6 +195,8 @@ def load_settings() -> Settings:
         phone_number=_env_override("MAILROCKET_PHONE_NUMBER", cand_cfg.get("phone_number", "")),
         resume_url=_env_override("MAILROCKET_RESUME_URL", cand_cfg.get("resume_url", "")),
         linkedin_profile_url=_env_override("MAILROCKET_LINKEDIN_PROFILE_URL", cand_cfg.get("linkedin_profile_url", "")),
+        preferred_roles=tuple(cand_cfg.get("preferred_roles", [])),
+        role_specific_emphasis=tuple(cand_cfg.get("role_specific_emphasis", [])),
     )
 
     email_cfg = cfg.get("email", {})
@@ -235,11 +240,12 @@ def load_settings() -> Settings:
     llm = LLMConfig(
         models=tuple(llm_cfg.get("models", [])),
         groq_temperature=float(llm_cfg.get("groq_temperature", 0.4)),
-        google_temperature=float(llm_cfg.get("google_temperature", 0.7)),
+        google_temperature=float(llm_cfg.get("google_temperature", 0.2)),
         openrouter_temperature=float(llm_cfg.get("openrouter_temperature", 0.4)),
         cerebras_temperature=float(llm_cfg.get("cerebras_temperature", 0.4)),
         mistral_temperature=float(llm_cfg.get("mistral_temperature", 0.4)),
         github_temperature=float(llm_cfg.get("github_temperature", 0.4)),
+        few_shot=bool(_env_override("MAILROCKET_FEW_SHOT", llm_cfg.get("few_shot", False))),
     )
 
     li = sec.get("linkedin", {}) or {}
