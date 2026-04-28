@@ -15,7 +15,7 @@ Usage:
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +44,8 @@ class Candidate:
     phone_number: str
     resume_url: str
     linkedin_profile_url: str
+    preferred_roles: tuple[str, ...]
+    role_specific_emphasis: tuple[dict, ...]
 
 
 @dataclass(frozen=True)
@@ -85,6 +87,7 @@ class LLMConfig:
     cerebras_temperature: float
     mistral_temperature: float
     github_temperature: float
+    few_shot: bool
 
 
 @dataclass(frozen=True)
@@ -99,6 +102,9 @@ class Secrets:
     github_token: str
     gmail_client_secret_path: Path
     gmail_token_path: Path
+    langfuse_public_key: str
+    langfuse_secret_key: str
+    langfuse_host: str
 
 
 @dataclass(frozen=True)
@@ -189,6 +195,8 @@ def load_settings() -> Settings:
         phone_number=_env_override("MAILROCKET_PHONE_NUMBER", cand_cfg.get("phone_number", "")),
         resume_url=_env_override("MAILROCKET_RESUME_URL", cand_cfg.get("resume_url", "")),
         linkedin_profile_url=_env_override("MAILROCKET_LINKEDIN_PROFILE_URL", cand_cfg.get("linkedin_profile_url", "")),
+        preferred_roles=tuple(cand_cfg.get("preferred_roles", [])),
+        role_specific_emphasis=tuple(cand_cfg.get("role_specific_emphasis", [])),
     )
 
     email_cfg = cfg.get("email", {})
@@ -232,15 +240,17 @@ def load_settings() -> Settings:
     llm = LLMConfig(
         models=tuple(llm_cfg.get("models", [])),
         groq_temperature=float(llm_cfg.get("groq_temperature", 0.4)),
-        google_temperature=float(llm_cfg.get("google_temperature", 0.7)),
+        google_temperature=float(llm_cfg.get("google_temperature", 0.2)),
         openrouter_temperature=float(llm_cfg.get("openrouter_temperature", 0.4)),
         cerebras_temperature=float(llm_cfg.get("cerebras_temperature", 0.4)),
         mistral_temperature=float(llm_cfg.get("mistral_temperature", 0.4)),
         github_temperature=float(llm_cfg.get("github_temperature", 0.4)),
+        few_shot=bool(_env_override("MAILROCKET_FEW_SHOT", llm_cfg.get("few_shot", False))),
     )
 
     li = sec.get("linkedin", {}) or {}
     gm = sec.get("gmail", {}) or {}
+    lf = sec.get("langfuse", {}) or {}
     secrets = Secrets(
         linkedin_username=_env_override("MAILROCKET_SECRET_LINKEDIN_USERNAME", li.get("username", "")),
         linkedin_password=_env_override("MAILROCKET_SECRET_LINKEDIN_PASSWORD", li.get("password", "")),
@@ -252,6 +262,9 @@ def load_settings() -> Settings:
         github_token=_env_override("MAILROCKET_SECRET_GITHUB_TOKEN", sec.get("github_token", "")),
         gmail_client_secret_path=_resolve_path(_env_override("MAILROCKET_SECRET_GMAIL_CLIENT_SECRET_PATH", gm.get("client_secret_path", "data/gmail/client_secret.json"))),
         gmail_token_path=_resolve_path(_env_override("MAILROCKET_SECRET_GMAIL_TOKEN_PATH", gm.get("token_path", "data/gmail/token.json"))),
+        langfuse_public_key=_env_override("MAILROCKET_SECRET_LANGFUSE_PUBLIC_KEY", lf.get("public_key", "")),
+        langfuse_secret_key=_env_override("MAILROCKET_SECRET_LANGFUSE_SECRET_KEY", lf.get("secret_key", "")),
+        langfuse_host=_env_override("MAILROCKET_SECRET_LANGFUSE_HOST", lf.get("host", "https://cloud.langfuse.com")),
     )
 
     return Settings(

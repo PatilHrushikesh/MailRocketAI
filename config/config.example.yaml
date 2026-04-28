@@ -25,6 +25,24 @@ candidate:
   resume_url: ""                      # public link, e.g. Drive/Dropbox
   linkedin_profile_url: ""
 
+  # Role-type preference order used by the LLM when scoring borderline posts.
+  # List from most preferred to least. Leave empty for no preference.
+  preferred_roles:
+    - "Python Developer"
+    - "Golang Developer"
+    - "Java Developer"
+
+  # Per-role-type emphasis rules injected into the email-drafting prompt.
+  # Each entry tells the LLM which projects/skills to highlight for a
+  # particular family of roles. Remove or edit to match your background.
+  role_specific_emphasis:
+    - role_type: "ML/Data"
+      emphasis: "Highlight ML research projects and data pipeline work."
+    - role_type: "Backend"
+      emphasis: "Emphasize Go/Kubernetes/Postgres achievements."
+    - role_type: "Competitive Engineering"
+      emphasis: "Mention coding competitions and algorithmic work."
+
 # Email defaults.
 email:
   from_mail: ""                       # Gmail address you authenticated
@@ -123,8 +141,12 @@ llm:
     # - {provider: openrouter, name: "qwen/qwen3-coder:free"}
 
   groq_temperature: 0.4
-  google_temperature: 0.7
+  google_temperature: 0.2            # lowered from 0.7 for extraction-heavy tasks
   openrouter_temperature: 0.4
   cerebras_temperature: 0.4
   mistral_temperature: 0.4
   github_temperature: 0.4
+
+  # When true, a one-shot example is appended to the system prompt.
+  # Improves consistency on weaker models at the cost of ~200 extra tokens.
+  few_shot: false

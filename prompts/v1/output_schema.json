@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mailrocket/prompts/v1/analysis.json",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "match_percentage",
+      "required_experience",
+      "experience_gap",
+      "missing_skills",
+      "contact_email",
+      "contact_number",
+      "application_link",
+      "title",
+      "company_name",
+      "location",
+      "salary",
+      "should_apply",
+      "message_content",
+      "additional_data"
+    ],
+    "properties": {
+      "match_percentage": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "required_experience": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "experience_gap": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "missing_skills": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "contact_email": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "contact_number": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "application_link": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "title": { "type": ["string", "null"] },
+      "company_name": { "type": ["string", "null"] },
+      "location": { "type": ["string", "null"] },
+      "salary": { "type": ["string", "null"] },
+      "should_apply": { "type": "boolean" },
+      "message_content": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["subject", "body"],
+        "properties": {
+          "subject": { "type": "string" },
+          "body": { "type": "string" }
+        }
+      },
+      "additional_data": {
+        "type": "object",
+        "properties": {
+          "employment_type": { "type": ["string", "null"] },
+          "application_deadline": { "type": ["string", "null"] },
+          "education_requirements": { "type": ["string", "null"] },
+          "certifications": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "security_clearance": { "type": ["string", "null"] },
+          "visa_sponsorship": { "type": ["boolean", "null"] },
+          "benefits": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "remote_eligibility": { "type": ["boolean", "null"] },
+          "travel_requirements": { "type": ["string", "null"] },
+          "skip_reason": { "type": ["string", "null"] },
+          "other": { "type": "object" }
+        }
+      }
+    }
+  }
+}
